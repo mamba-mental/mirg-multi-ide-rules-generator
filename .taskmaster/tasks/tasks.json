@@ -73,9 +73,7 @@
         "details": "Create a docker-compose.yml file with:\n\n1. Three services: mirg, taskmaster, and claude-cli\n2. Configure the mirg service with:\n   - image: ghcr.io/yourorg/mirg:latest\n   - user: \"1001:1001\"\n   - All required volume mounts from task #1\n   - Environment variables: MCP_WS_URL, KB_ROOT, IDE_TARGETS\n3. Configure the taskmaster service with:\n   - image: ghcr.io/yourorg/taskmaster:latest\n   - Bind mount for C:\\Taskmaster-MCP\n4. Configure the claude-cli service with:\n   - image: ghcr.io/yourorg/claude-cli:latest\n   - Dependency on mirg service\n   - Required volume mounts\n5. Create a shared network 'mirg_net'\n6. Define three profiles: dev-local, workstation, and cloud with appropriate mount configurations",
         "testStrategy": "Test docker-compose up with each profile (dev-local, workstation, cloud). Verify all services start correctly and can communicate with each other. Validate that the correct mounts are available in each profile. Test network connectivity between containers.",
         "priority": "high",
-        "dependencies": [
-          1
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -140,10 +138,7 @@
         "details": "Create a filesystem contract enforcement layer that:\n\n1. Manages access to `/mnt/nas/.../.context/*.md` files:\n   - Allow MIRG to create/overwrite but prevent destructive deletes\n   - Ensure Claude CLI and IDEs can read these files\n2. Handles `/mcp/memory/*.md` as append-only memory logs:\n   - Implement delta patch writing for MIRG\n   - Respect MCP as source of truth\n3. Manages `/mnt/nas/.../.artifacts/*.zip` as immutable after publish\n4. Enforces read-only access by default to `/host/github/<repo>` working trees\n   - Implement explicit permission system for write access\n\nUse file locking mechanisms where appropriate to prevent concurrent access issues.",
         "testStrategy": "Create test scenarios for each contract path: attempt unauthorized operations and verify they're blocked; perform authorized operations and verify success. Test concurrent access patterns to ensure data integrity. Verify append-only behavior for memory logs.",
         "priority": "high",
-        "dependencies": [
-          1,
-          2
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -209,10 +204,7 @@
         "details": "1. Configure containers to run as UID:GID `1001:1001`\n2. Modify Docker configuration to ensure host ACLs allow read/write for Docker Desktop user\n3. Implement read-only (`:ro`) mounts for knowledge base sources\n4. Create a file operation manager that:\n   - Debounces writes to NAS locations\n   - Implements batch artifact flushes\n   - Handles permission errors gracefully\n5. Update Dockerfile to create appropriate user/group and set permissions\n6. Document host-side permission requirements",
         "testStrategy": "Verify container processes run as UID 1001 and GID 1001. Test file operations on all mount points to ensure proper permissions. Validate debouncing by performing rapid sequential writes and measuring actual disk operations. Test batch artifact flushing with various file sizes.",
         "priority": "medium",
-        "dependencies": [
-          1,
-          2
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -348,8 +340,6 @@
         "testStrategy": "Test the agent on both Windows and WSL environments. Verify file change detection works correctly for all configured paths. Test secure connection establishment and reconnection scenarios. Measure resource usage under various load conditions. Validate end-to-end file change propagation to cloud MIRG instances.",
         "priority": "low",
         "dependencies": [
-          1,
-          2,
           3
         ],
         "status": "pending",
@@ -417,7 +407,6 @@
         "testStrategy": "Create unit tests for each message type and direction. Implement integration tests that verify end-to-end communication between MIRG and MCP. Test reconnection scenarios and error handling. Validate that diff-reindex and cache invalidation are triggered correctly. Verify shared filesystem access works as expected.",
         "priority": "high",
         "dependencies": [
-          2,
           3
         ],
         "status": "pending",
@@ -489,9 +478,7 @@
         "testStrategy": "Test the API endpoint with various parameter combinations. Verify generated commands are valid and include correct context and memory file parameters. Test both sidecar and host execution modes. Validate path resolution works correctly in both environments. Test error handling with invalid inputs.",
         "priority": "medium",
         "dependencies": [
-          2,
-          3,
-          7
+          3
         ],
         "status": "pending",
         "subtasks": [
@@ -563,8 +550,7 @@
         "testStrategy": "Test file access from both IDE and MIRG perspectives. Verify indexing works correctly through the bind mount. Test conflict scenarios to ensure IDE remains the source of truth. Validate that MIRG cannot mutate files without permission. Test the mutation protocol when permission is granted.",
         "priority": "medium",
         "dependencies": [
-          3,
-          4
+          3
         ],
         "status": "pending",
         "subtasks": [
@@ -635,9 +621,7 @@
         "testStrategy": "Measure detection latency for different filesystem types under various load conditions. Test with different file sizes and operation types. Verify debouncing works correctly for rapid sequential changes. Test error handling with inaccessible paths and permission issues. Validate resource usage remains within acceptable limits.",
         "priority": "high",
         "dependencies": [
-          1,
-          3,
-          5
+          3
         ],
         "status": "pending",
         "subtasks": [
@@ -704,8 +688,7 @@
         "testStrategy": "Test concurrent read/write scenarios to ensure data integrity. Verify delta patches are generated and applied correctly. Test conflict resolution when multiple sources attempt to update memory. Validate that MCP remains the source of truth. Test error handling with corrupted or inaccessible memory files.",
         "priority": "high",
         "dependencies": [
-          3,
-          7
+          3
         ],
         "status": "pending",
         "subtasks": [
@@ -778,17 +761,7 @@
         "testStrategy": "Review documentation for accuracy and completeness. Have different team members attempt to follow the documentation to verify clarity. Test examples and tutorials to ensure they work as described. Validate API reference against actual implementation.",
         "priority": "medium",
         "dependencies": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9,
-          10,
-          11
+          3
         ],
         "status": "pending",
         "subtasks": [
@@ -984,9 +957,7 @@
         "details": "1. Implement REST endpoints:\n   - `POST /api/rules/add` - Create new rules with content and metadata\n   - `PUT /api/rules/{id}` - Update existing rules with partial updates\n   - `DELETE /api/rules/{id}` - Soft delete rules with audit logging\n   - `POST /api/rules/batch-import` - Handle ZIP uploads for bulk imports\n   - `GET /api/rules/search` - Search rules with filters\n   - `GET /api/rules/{id}/history` - Get version history and diffs\n2. Implement JWT authentication with roles (`user`, `dev`, `admin`)\n3. Create Zod validation schemas for all endpoints\n4. Set up pino structured logging\n5. Implement semver versioning for rules\n6. Create audit logging system that tracks all changes\n7. For batch imports, implement async job processing with SSE progress updates\n8. Implement soft-delete functionality with optional admin-only hard-delete",
         "testStrategy": "1. Unit tests for each endpoint\n2. Authentication and authorization tests\n3. Validation tests for input schemas\n4. Integration tests for database operations\n5. End-to-end API tests\n6. Performance tests for batch operations\n7. Audit log verification tests",
         "priority": "high",
-        "dependencies": [
-          14
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -1053,9 +1024,7 @@
         "details": "1. Implement scoring algorithm: Score = `(priorityWeight × semanticRelevance) / tokenCount`\n2. Sort rules by score in descending order\n3. Accumulate rules until sum(tokens) ≥ budget\n4. If overflow ≤ 5%, truncate tail\n5. For larger overflows, implement optional genetic compression\n6. Add multi-file split recommendation functionality\n7. Create endpoint: `GET /api/optimize?budget=8000&ide=cursor`\n8. Return ordered rule list, `totalTokens`, `estimatedUsage%`, and optional split plan\n9. Integrate with `tiktoken` or TypeScript tokenizer for token estimation\n10. Implement caching for optimization results to improve performance",
         "testStrategy": "1. Unit tests for scoring algorithm\n2. Tests for accumulation and truncation logic\n3. Tests for genetic compression (if implemented)\n4. Integration tests with real rule data\n5. Performance tests with large rule sets\n6. Validation of token budget compliance\n7. End-to-end API tests",
         "priority": "high",
-        "dependencies": [
-          15
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -1185,10 +1154,7 @@
         "details": "1. Create graph structure with nodes for KB and personal rules\n2. Implement edges: `extends`, `relatedTo`, `conflictsWith`\n3. Store adjacency list in Postgres\n4. Store semantic links in Weaviate\n5. Implement metadata fields:\n   - `sourceRepo`, `author`, `createdAt`, `updatedAt`, `version`\n   - `ide`, `framework`, `tier`, `tags[]`, `tokenCount`, `priorityWeight`\n6. Create API endpoint: `GET /api/graph?ide=react`\n7. Return JSON graph representation\n8. Implement D3.js visualization in UI\n9. Add filtering capabilities for graph visualization\n10. Implement graph traversal algorithms for relationship discovery",
         "testStrategy": "1. Unit tests for graph construction\n2. Tests for metadata handling\n3. API endpoint tests\n4. Integration tests with database\n5. UI tests for graph visualization\n6. Performance tests with large graphs\n7. Validation of graph relationships",
         "priority": "medium",
-        "dependencies": [
-          14,
-          15
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -1253,10 +1219,7 @@
         "details": "1. Add `explanation: string` field that is persisted and indexed\n2. Show explanations in search tooltips and CLI assist\n3. Implement inheritance templates with `extends: [baseRuleId]`\n4. Create deterministic merge logic with conflict highlighting in editor\n5. Develop batch wizards for ZIP import/export of `.mdc`/`.json` files\n6. Implement mapping preview for imports\n7. Create personal namespace segregation\n8. Implement optional approval flow (`pending → approved`)\n9. Add team sharing functionality with export/import endpoints\n10. Implement role-based access for team collections",
         "testStrategy": "1. Unit tests for explanation field handling\n2. Tests for inheritance and merge logic\n3. Tests for batch import/export\n4. UI tests for conflict highlighting\n5. Integration tests for approval workflow\n6. End-to-end tests for team sharing\n7. Authorization tests for role-based access",
         "priority": "medium",
-        "dependencies": [
-          15,
-          18
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -1321,10 +1284,7 @@
         "details": "1. Implement hybrid search combining cosine similarity with fuzzy matching\n2. Add adjustable threshold for fuzzy matching\n3. Create explicit filter parameters\n4. Implement contextual recommendations endpoint: `GET /api/recommendations?context=[...]`\n5. Use history and project config to propose additional rules\n6. Create UI for KB coverage heatmaps per IDE/framework/tier\n7. Add drill-down lists for missing areas\n8. Implement CLI command autogen endpoint: `GET /api/cli-command?ids=&budget=`\n9. Return validated `claude-code` command with `--context` and `--memory-file`\n10. Include split suggestions if needed",
         "testStrategy": "1. Unit tests for search algorithms\n2. Tests for filter parameters\n3. Integration tests for recommendations\n4. UI tests for heatmaps and drill-downs\n5. End-to-end tests for CLI command generation\n6. Performance tests for search operations\n7. Relevance tests for search results",
         "priority": "high",
-        "dependencies": [
-          14,
-          16
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -1381,9 +1341,7 @@
         "details": "1. Create GraphQL schema mirroring REST CRUD/search functionality\n2. Implement GraphQL resolvers\n3. Add subscriptions for rule/memory events (for IDE plugins)\n4. Implement webhooks for events:\n   - `rule.added`, `rule.updated`, `kb.reindexed`\n   - `mcp.synced`, `deploy.status`\n5. Add configurable webhook endpoints\n6. Implement rate limiting: 60 req/min/IP (search), 10 req/min/IP (mutations)\n7. Create `/metrics` endpoint for Prometheus\n8. Set up Grafana dashboards for monitoring\n9. Implement webhook delivery retry logic\n10. Add webhook event history and debugging tools",
         "testStrategy": "1. Unit tests for GraphQL resolvers\n2. Tests for webhook delivery\n3. Rate limiting tests\n4. Integration tests for GraphQL subscriptions\n5. Metrics endpoint validation\n6. End-to-end API tests\n7. Performance tests under load",
         "priority": "medium",
-        "dependencies": [
-          15
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -1451,10 +1409,7 @@
         "details": "1. Implement SSO with OAuth2/OIDC (Okta/Azure AD)\n2. Set up JWT introspection for APIs\n3. Create JSONL audit logging in object storage\n4. Include user, endpoint, payload hash, and diff in audit logs\n5. Make audit logs SIEM-ready\n6. Implement region-targeted vector and meta stores\n7. Set up encryption-at-rest via KMS\n8. Add configurable retention policies\n9. Implement PII pseudonymization prior to embedding\n10. Set up nightly snapshots (Weaviate + Postgres)\n11. Create point-in-time restore workflow\n12. Implement organization reporting endpoint: `/api/reports/usage?teamId=`\n13. Return CSV/XLSX with rule usage, uptime, and support metrics",
         "testStrategy": "1. Authentication tests for SSO\n2. Authorization tests for different roles\n3. Audit log validation tests\n4. Data residency compliance tests\n5. PII pseudonymization verification\n6. Backup and restore tests\n7. Report generation tests\n8. Security penetration testing",
         "priority": "high",
-        "dependencies": [
-          15,
-          21
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -1519,11 +1474,7 @@
         "details": "1. Implement effectiveness models using LightGBM on historical data\n2. Create endpoint: `GET /api/models/evaluate?ruleId=`\n3. Implement predictive forecasting with time-series predictions\n4. Surface predictions in UI\n5. Create natural language to rule endpoint: `POST /api/nl2rule`\n6. Accept prose and emit `.mdc` scaffold with validation hints\n7. Implement auto-synthesis LLM pipeline\n8. Merge similar KB rules\n9. Implement de-duplication via fuzzy clustering\n10. Add tagged provenance for synthesized rules",
         "testStrategy": "1. Unit tests for model training and inference\n2. Tests for natural language processing\n3. Validation of rule synthesis quality\n4. Integration tests for the full pipeline\n5. UI tests for predictive features\n6. Performance tests for LLM operations\n7. A/B testing framework validation",
         "priority": "medium",
-        "dependencies": [
-          14,
-          15,
-          20
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -1588,10 +1539,7 @@
         "details": "1. Create NPM packages for VS Code/IntelliJ\n2. Implement search, CRUD, and optimization within IDE\n3. Develop cross-IDE migration utility: `mirg migrate --from cursor --to intellij`\n4. Convert `.mdc` formats via schema mapping\n5. Set up CI jobs to spin headless IDEs\n6. Validate generated packages for syntax/compatibility\n7. Implement in-IDE extensions for direct interaction\n8. Create unified command palette across IDEs\n9. Add context-aware rule suggestions in IDE\n10. Implement real-time rule updates in IDE",
         "testStrategy": "1. Unit tests for SDK functionality\n2. Tests for migration utility\n3. Integration tests with actual IDEs\n4. End-to-end tests for extension functionality\n5. Compatibility tests across different IDE versions\n6. Performance tests for in-IDE operations\n7. User experience validation",
         "priority": "medium",
-        "dependencies": [
-          15,
-          20
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -1661,9 +1609,7 @@
         "details": "1. Implement Chokidar-based file watching\n2. Add debounce mechanism for file changes\n3. Set up synchronization between Z: drive and NAS\n4. Implement conflict-safe staging commits via Taskmaster memory hooks\n5. Create file change detection and diffing\n6. Implement safe write operations to prevent data loss\n7. Add logging for sync operations\n8. Create recovery mechanisms for failed syncs\n9. Implement optional IDE hot-reload integrations\n10. Add configuration options for sync behavior",
         "testStrategy": "1. Unit tests for file watching and debounce\n2. Tests for synchronization logic\n3. Conflict resolution tests\n4. Integration tests with actual file systems\n5. Performance tests with large file sets\n6. Recovery tests for error scenarios\n7. End-to-end sync validation",
         "priority": "high",
-        "dependencies": [
-          13
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -1793,10 +1739,7 @@
         "details": "1. Integrate Monaco editor as a modal component\n2. Implement syntax highlighting for rule formats\n3. Create live preview functionality\n4. Develop metadata panel for rule properties\n5. Implement conflict detection for out-of-band edits\n6. Add conflict resolution prompts\n7. Create undo/redo functionality\n8. Implement auto-save with versioning\n9. Add keyboard shortcuts for common operations\n10. Implement optional CRDT for multi-user co-editing\n11. Add inline \"Explain this rule\" functionality",
         "testStrategy": "1. Unit tests for editor components\n2. Tests for syntax highlighting\n3. Live preview validation tests\n4. Conflict detection and resolution tests\n5. UI tests for user interactions\n6. Performance tests for large rules\n7. Multi-user editing tests (if implemented)",
         "priority": "medium",
-        "dependencies": [
-          15,
-          19
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -1863,9 +1806,7 @@
         "details": "1. Configure environment-specific URLs:\n   - Local Dev: `http://localhost:5173`\n   - Integration: `http://int.mirg.lan`\n   - Staging: `https://stage.mirg.io`\n   - Production: `https://mirg.io`\n2. Set up authentication providers:\n   - Local Dev: Mock JWT\n   - Integration: Keycloak (dev realm)\n   - Staging: Keycloak (stage)\n   - Production: Auth0/OIDC\n3. Configure databases:\n   - Local Dev: Docker Postgres 15\n   - Integration: Shared PG13\n   - Staging/Production: Aurora PG (multi-AZ)\n4. Set up vector stores:\n   - Local Dev: Weaviate local\n   - Integration: K8s Weaviate (1×)\n   - Staging: K8s (3×)\n   - Production: K8s (5×)\n5. Configure CI/CD pipelines\n6. Set up secrets management\n7. Configure monitoring and observability",
         "testStrategy": "1. Environment configuration validation tests\n2. Database connection tests\n3. Authentication provider tests\n4. Vector store tests\n5. CI/CD pipeline validation\n6. Secrets management tests\n7. Monitoring configuration tests",
         "priority": "medium",
-        "dependencies": [
-          17
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -1935,11 +1876,7 @@
         "details": "1. Configure host to container mount matrix:\n   - `Z:\\projects\\rules-generator` (NAS) → `/mnt/nas/projects/rules-generator`\n   - `C:\\GitHub\\` (workstation) → `/host/github`\n   - `C:\\Taskmaster-MCP\\` → `/mcp`\n   - `/mnt/c/Users/<user>/` (WSL) → `/wsl/home`\n   - `Z:\\docker\\` (NAS) → `/shared/docker`\n2. Set up Docker Compose profiles:\n   - `dev-local`: NAS + GitHub mounts; MCP co-resident\n   - `workstation`: add WSL bind for CLI scripting\n   - `cloud`: no host binds → use agent or object storage\n3. Implement filesystem contracts\n4. Configure permissions and identity (UID:GID `1001:1001`)\n5. Set up runtime interaction contracts:\n   - MIRG ↔ Taskmaster MCP\n   - MIRG ↔ Claude Code CLI\n   - MIRG ↔ IDEs (Cursor/VS Code/IntelliJ)",
         "testStrategy": "1. Mount configuration tests\n2. Docker Compose profile validation\n3. Filesystem contract enforcement tests\n4. Permission and identity tests\n5. Runtime interaction tests\n6. Performance tests for file operations\n7. End-to-end environment tests",
         "priority": "medium",
-        "dependencies": [
-          13,
-          17,
-          26
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -2005,7 +1942,6 @@
         "testStrategy": "1. Security scanning validation\n2. Container security tests\n3. Rate limiting tests\n4. PII handling tests\n5. Audit retention validation\n6. Security header tests\n7. TLS configuration tests\n8. Penetration testing",
         "priority": "high",
         "dependencies": [
-          17,
           22
         ],
         "status": "pending",
@@ -2072,9 +2008,7 @@
         "details": "1. Configure Vitest + ts-mock for unit testing (target ≥ 90% statements)\n2. Set up Supertest/Playwright for API testing\n3. Create custom MAP harness for vector testing (target MAP@10 ≥ 0.85)\n4. Configure Cypress for component and e2e UI testing\n5. Set up k6/Locust for load testing (target p95 < 1s @ 10k VUs)\n6. Implement OWASP ZAP and Burp for security testing\n7. Create stakeholder scripts for UAT\n8. Set up CI integration for automated testing\n9. Implement test reporting and dashboards\n10. Create test data generation utilities",
         "testStrategy": "1. Test framework configuration validation\n2. Sample tests for each testing type\n3. CI integration tests\n4. Test reporting validation\n5. Test data generation tests\n6. End-to-end testing pipeline validation\n7. Performance tests for testing infrastructure",
         "priority": "medium",
-        "dependencies": [
-          17
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -2142,12 +2076,7 @@
         "details": "1. Set up Vite/TS frontend project\n2. Configure Shadcn UI components\n3. Fix badge/progress imports by pinning `@radix-ui/react-progress`\n4. Fix Shadcn generator exports\n5. Implement UI layouts for all major features\n6. Create responsive design for all screen sizes\n7. Implement dark/light mode\n8. Set up SSE/WebSocket for real-time updates\n9. Configure GraphQL client\n10. Implement authentication UI\n11. Create search interface\n12. Develop rule editor UI\n13. Implement knowledge graph visualization\n14. Create coverage heatmaps",
         "testStrategy": "1. Component unit tests\n2. UI integration tests\n3. Responsive design tests\n4. Accessibility tests\n5. Performance tests\n6. Browser compatibility tests\n7. End-to-end user flow tests",
         "priority": "high",
-        "dependencies": [
-          15,
-          18,
-          20,
-          27
-        ],
+        "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
@@ -2210,6 +2139,213 @@
       "created": "2025-07-26T09:50:42.539Z",
       "updated": "2025-07-26T09:53:06.073Z",
       "description": "Tasks for phase-2 context"
+    }
+  },
+  "phase-2-security": {
+    "tasks": [
+      {
+        "id": 3,
+        "title": "Implement Filesystem Contract Enforcement",
+        "description": "Implement the filesystem contracts defined in Appendix X.3, ensuring proper access patterns and permissions for each path.",
+        "details": "Create a filesystem contract enforcement layer that:\n\n1. Manages access to `/mnt/nas/.../.context/*.md` files:\n   - Allow MIRG to create/overwrite but prevent destructive deletes\n   - Ensure Claude CLI and IDEs can read these files\n2. Handles `/mcp/memory/*.md` as append-only memory logs:\n   - Implement delta patch writing for MIRG\n   - Respect MCP as source of truth\n3. Manages `/mnt/nas/.../.artifacts/*.zip` as immutable after publish\n4. Enforces read-only access by default to `/host/github/<repo>` working trees\n   - Implement explicit permission system for write access\n\nUse file locking mechanisms where appropriate to prevent concurrent access issues.",
+        "testStrategy": "Create test scenarios for each contract path: attempt unauthorized operations and verify they're blocked; perform authorized operations and verify success. Test concurrent access patterns to ensure data integrity. Verify append-only behavior for memory logs.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Filesystem Contract Enforcement Layer Architecture",
+            "description": "Define the architecture for the enforcement layer, specifying contract boundaries, adapter patterns, and integration points for Docker, WebSocket MCP, and Weaviate environments.",
+            "dependencies": [],
+            "details": "Establish the enforcement layer as a boundary using the adapter pattern to mediate API incompatibilities and enforce contract behaviors. Specify how the layer will interact with containerized environments, WebSocket MCP, and Weaviate, incorporating best practices for security, resource limits, and monitoring.",
+            "status": "pending",
+            "testStrategy": "Review architecture diagrams and interface definitions. Validate that all contract paths and integration points are covered. Peer review for security and extensibility."
+          },
+          {
+            "id": 2,
+            "title": "Implement Path-Specific Access Control and Permissions",
+            "description": "Develop logic to enforce access patterns and permissions for each contract path, including append-only, immutable, and read-only behaviors.",
+            "dependencies": [
+              "3.1"
+            ],
+            "details": "Implement access control lists (ACLs) and capability checks for each path: allow MIRG to create/overwrite but not destructively delete in .context, enforce append-only for memory logs, set artifacts as immutable post-publish, and default to read-only for GitHub working trees. Integrate explicit permission system for write access where required.",
+            "status": "pending",
+            "testStrategy": "Create unit and integration tests for each path. Attempt unauthorized and authorized operations, verifying enforcement and correct error handling."
+          },
+          {
+            "id": 3,
+            "title": "Integrate File Locking and Concurrency Controls",
+            "description": "Add file locking mechanisms to prevent concurrent access issues and ensure data integrity across all contract paths.",
+            "dependencies": [
+              "3.2"
+            ],
+            "details": "Implement file and record-level locking for critical paths, especially for append-only memory logs and artifact publishing. Ensure locks are respected across Docker containers and network mounts. Handle lock acquisition, release, and timeout scenarios.",
+            "status": "pending",
+            "testStrategy": "Simulate concurrent access scenarios. Verify that locks prevent race conditions and data corruption. Test lock timeout and recovery logic."
+          },
+          {
+            "id": 4,
+            "title": "Enforce Container and Environment Security Best Practices",
+            "description": "Apply Docker and environment security best practices to the enforcement layer, including secrets management, volume mount security, non-root users, and resource limits.",
+            "dependencies": [
+              "3.1"
+            ],
+            "details": "Configure Docker containers to use read-only binds where possible, manage secrets securely, run as non-root, and apply AppArmor/SELinux profiles. Set resource limits and health checks. Ensure enforcement layer is isolated and monitored.",
+            "status": "pending",
+            "testStrategy": "Run security scans and container audits. Validate that enforcement layer cannot escalate privileges or leak secrets. Test resource exhaustion scenarios."
+          },
+          {
+            "id": 5,
+            "title": "Implement Monitoring, Logging, and Contract Violation Reporting",
+            "description": "Add structured logging, monitoring, and alerting for contract enforcement actions and violations, integrating with Prometheus/Grafana and supporting correlation IDs.",
+            "dependencies": [
+              "3.2",
+              "3.3"
+            ],
+            "details": "Log all access attempts, contract violations, and enforcement actions with structured logs. Expose metrics for monitoring contract adherence and performance. Integrate with Prometheus/Grafana dashboards and implement alerting for critical violations.",
+            "status": "pending",
+            "testStrategy": "Trigger contract violations and verify logs and alerts are generated. Validate metrics are exposed and dashboards reflect enforcement activity. Test correlation of logs across distributed components."
+          }
+        ]
+      },
+      {
+        "id": 22,
+        "title": "Implement Enterprise Security and Compliance",
+        "description": "Develop SSO, audit trails, data residency controls, PII pseudonymization, and point-in-time restore functionality.",
+        "details": "1. Implement SSO with OAuth2/OIDC (Okta/Azure AD)\n2. Set up JWT introspection for APIs\n3. Create JSONL audit logging in object storage\n4. Include user, endpoint, payload hash, and diff in audit logs\n5. Make audit logs SIEM-ready\n6. Implement region-targeted vector and meta stores\n7. Set up encryption-at-rest via KMS\n8. Add configurable retention policies\n9. Implement PII pseudonymization prior to embedding\n10. Set up nightly snapshots (Weaviate + Postgres)\n11. Create point-in-time restore workflow\n12. Implement organization reporting endpoint: `/api/reports/usage?teamId=`\n13. Return CSV/XLSX with rule usage, uptime, and support metrics",
+        "testStrategy": "1. Authentication tests for SSO\n2. Authorization tests for different roles\n3. Audit log validation tests\n4. Data residency compliance tests\n5. PII pseudonymization verification\n6. Backup and restore tests\n7. Report generation tests\n8. Security penetration testing",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Secure SSO and API Authentication",
+            "description": "Develop and integrate Single Sign-On (SSO) using OAuth2/OIDC with providers such as Okta and Azure AD, and set up JWT introspection for API authentication. Ensure Docker containers use secrets management, non-root users, and AppArmor/SELinux profiles for secure deployment.",
+            "dependencies": [],
+            "details": "Configure SSO endpoints, enforce secure authentication flows, and validate JWTs for all API requests. Apply Docker best practices for secrets and container hardening. Document authentication configuration options.",
+            "status": "pending",
+            "testStrategy": "Run authentication and authorization tests for all roles. Validate SSO login/logout flows and JWT introspection. Perform security penetration testing on authentication endpoints."
+          },
+          {
+            "id": 2,
+            "title": "Establish Comprehensive Audit Logging and SIEM Integration",
+            "description": "Create structured JSONL audit logs in object storage, capturing user, endpoint, payload hash, and diffs. Ensure logs are SIEM-ready and follow structured logging with correlation IDs. Implement secure Docker logging strategies.",
+            "dependencies": [
+              "22.1"
+            ],
+            "details": "Design audit log schema, implement logging in all services, and ensure logs are securely stored and accessible for compliance. Integrate with SIEM tools for real-time monitoring and alerting.",
+            "status": "pending",
+            "testStrategy": "Validate audit log entries for all critical actions. Test log ingestion by SIEM. Verify structured format and correlation ID propagation."
+          },
+          {
+            "id": 3,
+            "title": "Enforce Data Residency and Encryption Controls",
+            "description": "Implement region-targeted vector and metadata stores, enforce encryption-at-rest using KMS, and configure retention policies. Apply Weaviate production patterns for sharding, replication, and backup.",
+            "dependencies": [
+              "22.1"
+            ],
+            "details": "Deploy vector/meta stores in required regions, configure KMS for all storage, and set up retention and backup policies. Use Weaviate's sharding, replication, and backup features for compliance and resilience.",
+            "status": "pending",
+            "testStrategy": "Run data residency compliance tests. Verify encryption-at-rest and retention policy enforcement. Test backup and restore procedures."
+          },
+          {
+            "id": 4,
+            "title": "Implement PII Pseudonymization and Data Protection",
+            "description": "Develop mechanisms to pseudonymize personally identifiable information (PII) before embedding or storage. Ensure compliance with privacy regulations and integrate with existing data pipelines.",
+            "dependencies": [
+              "22.1"
+            ],
+            "details": "Identify PII fields, apply pseudonymization algorithms, and validate that no raw PII is stored in vector/meta stores. Document pseudonymization process and configuration.",
+            "status": "pending",
+            "testStrategy": "Perform PII pseudonymization verification tests. Attempt to recover original PII from stored data to ensure irreversibility. Review compliance with privacy requirements."
+          },
+          {
+            "id": 5,
+            "title": "Implement Point-in-Time Restore and Compliance Reporting",
+            "description": "Set up nightly snapshots for Weaviate and Postgres, create a point-in-time restore workflow, and develop an organization reporting endpoint that returns usage, uptime, and support metrics in CSV/XLSX.",
+            "dependencies": [
+              "22.3"
+            ],
+            "details": "Automate snapshot creation and retention, implement restore procedures, and build reporting APIs. Ensure Docker containers use health checks and resource limits for backup/restore reliability.",
+            "status": "pending",
+            "testStrategy": "Run backup and restore tests for both Weaviate and Postgres. Validate report generation accuracy and format. Test restore workflows under failure scenarios."
+          }
+        ]
+      },
+      {
+        "id": 30,
+        "title": "Implement Security and Compliance Measures",
+        "description": "Set up OWASP scanning, container security, rate limiting, PII handling, and audit retention.",
+        "details": "1. Implement OWASP Top-10 scanning on each PR\n2. Block high-severity security issues\n3. Configure containers to run as non-root UID 1001\n4. Set up least-privilege mounts (prefer `:ro` on KB paths)\n5. Implement rate-limiting for endpoints\n6. Add bot/abuse mitigation\n7. Set up PII pseudonymization prior to embeddings\n8. Configure audit retention for 7 years in Glacier or equivalent\n9. Implement security headers\n10. Set up content security policy\n11. Configure TLS settings\n12. Implement vulnerability scanning",
+        "testStrategy": "1. Security scanning validation\n2. Container security tests\n3. Rate limiting tests\n4. PII handling tests\n5. Audit retention validation\n6. Security header tests\n7. TLS configuration tests\n8. Penetration testing",
+        "priority": "high",
+        "dependencies": [
+          22
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Automated OWASP Top-10 and Vulnerability Scanning in CI/CD",
+            "description": "Integrate automated OWASP Top-10 scanning and container image vulnerability scanning into the CI/CD pipeline for every pull request, ensuring high-severity issues are blocked from merging.",
+            "dependencies": [],
+            "details": "Use tools such as Trivy or Docker Scout for container image scanning and OWASP ZAP for application scanning. Configure the pipeline to fail builds on detection of high-severity vulnerabilities. Ensure scanning covers both application code and container dependencies.",
+            "status": "pending",
+            "testStrategy": "Validate that scans run on every PR, block merges with high-severity findings, and generate reports. Test with known vulnerable images and code to confirm detection and enforcement."
+          },
+          {
+            "id": 2,
+            "title": "Enforce Container Runtime Security and Least Privilege",
+            "description": "Configure all containers to run as non-root (UID 1001), apply least-privilege mounts (read-only where possible), and implement resource limits and security profiles.",
+            "dependencies": [
+              "30.1"
+            ],
+            "details": "Set USER directive to 1001 in Dockerfiles. Use --read-only flag and mount volumes as read-only for knowledge base paths. Apply AppArmor/SELinux profiles, and define CPU/memory limits. Avoid mounting sensitive host directories and use Docker networks for isolation.",
+            "status": "pending",
+            "testStrategy": "Run containers and verify UID, mount options, and resource limits. Attempt privilege escalation and unauthorized writes to confirm enforcement. Validate AppArmor/SELinux profile application."
+          },
+          {
+            "id": 3,
+            "title": "Implement Endpoint Rate Limiting and Abuse Mitigation",
+            "description": "Set up rate limiting for all API endpoints and add bot/abuse mitigation mechanisms to protect against denial-of-service and brute-force attacks.",
+            "dependencies": [
+              "30.1"
+            ],
+            "details": "Use middleware or API gateway to enforce per-IP and per-user rate limits. Implement CAPTCHA or behavioral analysis for abuse-prone endpoints. Monitor and log rate-limited and suspicious activity for further analysis.",
+            "status": "pending",
+            "testStrategy": "Simulate high request volumes and bot traffic to verify rate limiting and abuse detection. Confirm legitimate users are not blocked under normal usage."
+          },
+          {
+            "id": 4,
+            "title": "Establish PII Pseudonymization and Secure Handling",
+            "description": "Implement pseudonymization of personally identifiable information (PII) before processing with embeddings or storage, ensuring compliance with privacy regulations.",
+            "dependencies": [
+              "30.1"
+            ],
+            "details": "Integrate a PII detection and pseudonymization library in the data pipeline. Ensure all PII is replaced or masked before being sent to vector stores or external services. Document the pseudonymization process and audit regularly.",
+            "status": "pending",
+            "testStrategy": "Test with sample data containing PII to verify detection and pseudonymization. Review logs and outputs to ensure no raw PII is present post-processing."
+          },
+          {
+            "id": 5,
+            "title": "Configure Long-Term Audit Retention and Security Headers",
+            "description": "Set up audit log retention for 7 years in Glacier or equivalent cold storage, and implement security headers and content security policy for all web endpoints.",
+            "dependencies": [
+              "30.1"
+            ],
+            "details": "Configure log shipping to cold storage with retention policies. Apply HTTP security headers (e.g., Strict-Transport-Security, X-Content-Type-Options) and a robust Content Security Policy. Document retention and header configurations.",
+            "status": "pending",
+            "testStrategy": "Verify audit logs are stored and retrievable for 7 years. Use security header testing tools to confirm correct headers and CSP are applied to all endpoints."
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-26T10:33:13.200Z",
+      "updated": "2025-07-26T10:33:13.200Z",
+      "description": "Security and compliance focused tasks from phase-2"
     }
   }
 }
