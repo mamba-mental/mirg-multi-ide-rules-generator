@@ -1,0 +1,2215 @@
+{
+  "phase-2": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Configure Docker Volume Mounts",
+        "description": "Implement the host-to-container mount matrix as specified in Appendix X.1, ensuring proper path mapping and permissions.",
+        "details": "Create a Docker configuration that establishes the required bind mounts between host and container:\n\n1. Map `Z:\\projects\\rules-generator` to `/mnt/nas/projects/rules-generator` (RW)\n2. Map `C:\\GitHub\\` to `/host/github` (RW)\n3. Map `C:\\Taskmaster-MCP\\` to `/mcp` (RW)\n4. Map `/mnt/c/Users/<user>/` to `/wsl/home` (RW)\n5. Map `Z:\\docker\\` to `/shared/docker` (RW)\n\nEnsure Docker Desktop has file sharing enabled for C: and Z: drives. Handle UNC path mounting if NAS SMB permissions are strict. Implement proper error handling for cases where mounts fail.",
+        "testStrategy": "Verify each mount point is accessible with correct read/write permissions by creating test files in each location from both host and container sides. Test with different user permissions to ensure proper access. Validate error handling by intentionally creating invalid mount scenarios.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Validate Host and Docker Desktop File Sharing Configuration",
+            "description": "Ensure Docker Desktop is configured to share the required host drives (C: and Z:) and that network/NAS shares (UNC paths) are accessible with appropriate permissions for mounting.",
+            "dependencies": [],
+            "details": "Check Docker Desktop settings to confirm file sharing is enabled for C: and Z: drives. Verify that NAS SMB permissions allow Docker to access Z: paths. For strict NAS environments, test UNC path mounting and document any required credential or permission adjustments.",
+            "status": "pending",
+            "testStrategy": "Attempt to access C: and Z: from within a test container. For NAS/UNC paths, create and delete a test file from both host and container. Validate error messages for denied access."
+          },
+          {
+            "id": 2,
+            "title": "Define and Document Host-to-Container Mount Matrix",
+            "description": "Specify the exact mapping of host directories to container paths, including access modes (read/write), and document these mappings for reference and reproducibility.",
+            "dependencies": [
+              "1.1"
+            ],
+            "details": "List each required bind mount: Z:\\projects\\rules-generator to /mnt/nas/projects/rules-generator (RW), C:\\GitHub\\ to /host/github (RW), C:\\Taskmaster-MCP\\ to /mcp (RW), /mnt/c/Users/<user>/ to /wsl/home (RW), Z:\\docker\\ to /shared/docker (RW). Include notes on path normalization for Windows vs. Linux containers and any special handling for WSL or UNC paths.",
+            "status": "pending",
+            "testStrategy": "Review the documented matrix and verify that all required paths are present and correctly mapped. Cross-check with Docker Compose or Docker CLI configuration."
+          },
+          {
+            "id": 3,
+            "title": "Implement Docker Configuration with Bind Mounts",
+            "description": "Create or update Docker Compose and/or Docker CLI configurations to establish the specified bind mounts, ensuring correct path syntax and access modes for each mapping.",
+            "dependencies": [
+              "1.2"
+            ],
+            "details": "Use the appropriate Docker Compose 'volumes' syntax or Docker CLI '--mount'/'-v' flags to define each mount. Ensure that relative and absolute paths are handled correctly for the host OS. Apply best practices such as using named volumes where appropriate, and set mount options (e.g., :rw) explicitly.",
+            "status": "pending",
+            "testStrategy": "Start containers using the configuration. From within each container, verify that each mount point is present, accessible, and has the expected read/write permissions."
+          },
+          {
+            "id": 4,
+            "title": "Implement Mount Security and Error Handling",
+            "description": "Apply Docker best practices for mount security (read-only where possible, non-root users, AppArmor/SELinux profiles) and implement robust error handling for mount failures.",
+            "dependencies": [
+              "1.3"
+            ],
+            "details": "Review each mount to determine if read-only access is sufficient and update configuration accordingly. Ensure containers run as non-root users. Enable security profiles if supported. Implement startup scripts or health checks to detect and log mount failures, providing actionable error messages.",
+            "status": "pending",
+            "testStrategy": "Intentionally misconfigure a mount (e.g., invalid path or permissions) and verify that the container fails gracefully with clear error output. Test that read-only mounts prevent writes and that non-root users cannot escalate privileges."
+          },
+          {
+            "id": 5,
+            "title": "Verify Mount Accessibility and Permissions End-to-End",
+            "description": "Test each mount from both host and container perspectives to ensure correct accessibility, permissions, and error handling, including edge cases such as permission errors and NAS/UNC path failures.",
+            "dependencies": [
+              "1.4"
+            ],
+            "details": "For each mount, create, modify, and delete test files from both the host and inside the container. Test with different user accounts if possible. Simulate permission errors and network disconnects for NAS/UNC mounts. Document all observed behaviors and any required troubleshooting steps.",
+            "status": "pending",
+            "testStrategy": "Execute a test suite that covers file creation, modification, and deletion on each mount. Validate that permission errors are handled as expected and that all mounts function correctly under normal and failure scenarios."
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Implement Docker Compose Configuration",
+        "description": "Create the Docker Compose configuration with the specified services (mirg, taskmaster, claude-cli) and network setup as defined in Appendix X.2.",
+        "details": "Create a docker-compose.yml file with:\n\n1. Three services: mirg, taskmaster, and claude-cli\n2. Configure the mirg service with:\n   - image: ghcr.io/yourorg/mirg:latest\n   - user: \"1001:1001\"\n   - All required volume mounts from task #1\n   - Environment variables: MCP_WS_URL, KB_ROOT, IDE_TARGETS\n3. Configure the taskmaster service with:\n   - image: ghcr.io/yourorg/taskmaster:latest\n   - Bind mount for C:\\Taskmaster-MCP\n4. Configure the claude-cli service with:\n   - image: ghcr.io/yourorg/claude-cli:latest\n   - Dependency on mirg service\n   - Required volume mounts\n5. Create a shared network 'mirg_net'\n6. Define three profiles: dev-local, workstation, and cloud with appropriate mount configurations",
+        "testStrategy": "Test docker-compose up with each profile (dev-local, workstation, cloud). Verify all services start correctly and can communicate with each other. Validate that the correct mounts are available in each profile. Test network connectivity between containers.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define Service Specifications and Images",
+            "description": "Specify the three required services (mirg, taskmaster, claude-cli) in the docker-compose.yml file, including their images, user directives, and dependencies as per Appendix X.2.",
+            "dependencies": [],
+            "details": "Set the image for each service, avoid using 'latest' in production, configure the mirg service to run as a non-root user (user: '1001:1001'), and ensure claude-cli depends on mirg. Use specific image tags for production deployments.",
+            "status": "pending",
+            "testStrategy": "Verify that all services are defined and start successfully with 'docker-compose up'. Check that the correct user is set for mirg and that service dependencies are respected."
+          },
+          {
+            "id": 2,
+            "title": "Configure Volumes, Mounts, and Profiles",
+            "description": "Implement all required volume mounts for each service, ensuring proper access patterns and security, and define the three profiles (dev-local, workstation, cloud) with environment-specific mount configurations.",
+            "dependencies": [
+              "2.1"
+            ],
+            "details": "Apply volume mount security best practices (read-only binds where possible), ensure mirg and claude-cli have all required mounts from task #1, and configure the taskmaster bind mount for C:\\Taskmaster-MCP. Define profiles to enable/disable mounts as needed for each environment.",
+            "status": "pending",
+            "testStrategy": "Start each profile and verify that the correct mounts are present and accessible with appropriate permissions in each container."
+          },
+          {
+            "id": 3,
+            "title": "Set Up Environment Variables and Secrets Management",
+            "description": "Configure environment variables (MCP_WS_URL, KB_ROOT, IDE_TARGETS) for mirg and other services as needed, using secure practices for sensitive data.",
+            "dependencies": [
+              "2.1"
+            ],
+            "details": "Use Docker Compose environment variable best practices, including .env files and Docker Secrets for sensitive values. Ensure environment variable precedence and interpolation are handled correctly.",
+            "status": "pending",
+            "testStrategy": "Check that all required environment variables are set and accessible within containers. Validate that secrets are not exposed in logs or configuration files."
+          },
+          {
+            "id": 4,
+            "title": "Define Shared Network and Service Isolation",
+            "description": "Create the shared Docker network 'mirg_net' and ensure all services are attached to it, following best practices for service isolation and network configuration.",
+            "dependencies": [
+              "2.1"
+            ],
+            "details": "Configure the network in docker-compose.yml, group network settings together, and ensure only necessary services are exposed externally. Use Docker networks to isolate services from the host and each other as appropriate.",
+            "status": "pending",
+            "testStrategy": "Verify that all services can communicate over 'mirg_net' and that no unintended ports are exposed to the host."
+          },
+          {
+            "id": 5,
+            "title": "Implement Health Checks, Resource Limits, and Logging",
+            "description": "Add health checks for all services, set resource limits (CPU, memory), and configure structured logging for observability and troubleshooting.",
+            "dependencies": [
+              "2.1"
+            ],
+            "details": "Define health checks in docker-compose.yml for each service, set memory and CPU limits to prevent resource exhaustion, and configure logging drivers and options for structured logs. Ensure logging includes correlation IDs for traceability.",
+            "status": "pending",
+            "testStrategy": "Simulate service failures to confirm health checks work, verify containers respect resource limits, and check that logs are structured and contain necessary metadata."
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Implement Filesystem Contract Enforcement",
+        "description": "Implement the filesystem contracts defined in Appendix X.3, ensuring proper access patterns and permissions for each path.",
+        "details": "Create a filesystem contract enforcement layer that:\n\n1. Manages access to `/mnt/nas/.../.context/*.md` files:\n   - Allow MIRG to create/overwrite but prevent destructive deletes\n   - Ensure Claude CLI and IDEs can read these files\n2. Handles `/mcp/memory/*.md` as append-only memory logs:\n   - Implement delta patch writing for MIRG\n   - Respect MCP as source of truth\n3. Manages `/mnt/nas/.../.artifacts/*.zip` as immutable after publish\n4. Enforces read-only access by default to `/host/github/<repo>` working trees\n   - Implement explicit permission system for write access\n\nUse file locking mechanisms where appropriate to prevent concurrent access issues.",
+        "testStrategy": "Create test scenarios for each contract path: attempt unauthorized operations and verify they're blocked; perform authorized operations and verify success. Test concurrent access patterns to ensure data integrity. Verify append-only behavior for memory logs.",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Filesystem Contract Enforcement Layer Architecture",
+            "description": "Define the architecture for the enforcement layer, specifying contract boundaries, adapter patterns, and integration points for Docker, WebSocket MCP, and Weaviate environments.",
+            "dependencies": [],
+            "details": "Establish the enforcement layer as a boundary using the adapter pattern to mediate API incompatibilities and enforce contract behaviors. Specify how the layer will interact with containerized environments, WebSocket MCP, and Weaviate, incorporating best practices for security, resource limits, and monitoring.",
+            "status": "pending",
+            "testStrategy": "Review architecture diagrams and interface definitions. Validate that all contract paths and integration points are covered. Peer review for security and extensibility."
+          },
+          {
+            "id": 2,
+            "title": "Implement Path-Specific Access Control and Permissions",
+            "description": "Develop logic to enforce access patterns and permissions for each contract path, including append-only, immutable, and read-only behaviors.",
+            "dependencies": [
+              "3.1"
+            ],
+            "details": "Implement access control lists (ACLs) and capability checks for each path: allow MIRG to create/overwrite but not destructively delete in .context, enforce append-only for memory logs, set artifacts as immutable post-publish, and default to read-only for GitHub working trees. Integrate explicit permission system for write access where required.",
+            "status": "pending",
+            "testStrategy": "Create unit and integration tests for each path. Attempt unauthorized and authorized operations, verifying enforcement and correct error handling."
+          },
+          {
+            "id": 3,
+            "title": "Integrate File Locking and Concurrency Controls",
+            "description": "Add file locking mechanisms to prevent concurrent access issues and ensure data integrity across all contract paths.",
+            "dependencies": [
+              "3.2"
+            ],
+            "details": "Implement file and record-level locking for critical paths, especially for append-only memory logs and artifact publishing. Ensure locks are respected across Docker containers and network mounts. Handle lock acquisition, release, and timeout scenarios.",
+            "status": "pending",
+            "testStrategy": "Simulate concurrent access scenarios. Verify that locks prevent race conditions and data corruption. Test lock timeout and recovery logic."
+          },
+          {
+            "id": 4,
+            "title": "Enforce Container and Environment Security Best Practices",
+            "description": "Apply Docker and environment security best practices to the enforcement layer, including secrets management, volume mount security, non-root users, and resource limits.",
+            "dependencies": [
+              "3.1"
+            ],
+            "details": "Configure Docker containers to use read-only binds where possible, manage secrets securely, run as non-root, and apply AppArmor/SELinux profiles. Set resource limits and health checks. Ensure enforcement layer is isolated and monitored.",
+            "status": "pending",
+            "testStrategy": "Run security scans and container audits. Validate that enforcement layer cannot escalate privileges or leak secrets. Test resource exhaustion scenarios."
+          },
+          {
+            "id": 5,
+            "title": "Implement Monitoring, Logging, and Contract Violation Reporting",
+            "description": "Add structured logging, monitoring, and alerting for contract enforcement actions and violations, integrating with Prometheus/Grafana and supporting correlation IDs.",
+            "dependencies": [
+              "3.2",
+              "3.3"
+            ],
+            "details": "Log all access attempts, contract violations, and enforcement actions with structured logs. Expose metrics for monitoring contract adherence and performance. Integrate with Prometheus/Grafana dashboards and implement alerting for critical violations.",
+            "status": "pending",
+            "testStrategy": "Trigger contract violations and verify logs and alerts are generated. Validate metrics are exposed and dashboards reflect enforcement activity. Test correlation of logs across distributed components."
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Configure Container Permissions and Identity",
+        "description": "Set up container permissions and identity as specified in Appendix X.4, ensuring proper UID/GID configuration and mount permissions.",
+        "details": "1. Configure containers to run as UID:GID `1001:1001`\n2. Modify Docker configuration to ensure host ACLs allow read/write for Docker Desktop user\n3. Implement read-only (`:ro`) mounts for knowledge base sources\n4. Create a file operation manager that:\n   - Debounces writes to NAS locations\n   - Implements batch artifact flushes\n   - Handles permission errors gracefully\n5. Update Dockerfile to create appropriate user/group and set permissions\n6. Document host-side permission requirements",
+        "testStrategy": "Verify container processes run as UID 1001 and GID 1001. Test file operations on all mount points to ensure proper permissions. Validate debouncing by performing rapid sequential writes and measuring actual disk operations. Test batch artifact flushing with various file sizes.",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configure Container UID/GID and User",
+            "description": "Set up all containers to run as the specified non-root user and group (UID:GID 1001:1001), ensuring the Dockerfile creates the appropriate user/group and sets permissions accordingly.",
+            "dependencies": [],
+            "details": "Update Dockerfiles to include user and group creation with UID 1001 and GID 1001, and use the USER directive to run processes as this user. Ensure all file and directory permissions inside the image are compatible with this UID/GID. Follow Docker best practices to avoid running as root and to minimize security risks.",
+            "status": "pending",
+            "testStrategy": "Build and run containers, then verify with 'id' and 'whoami' that processes run as UID 1001 and GID 1001. Attempt file operations on mounted volumes to confirm correct permissions."
+          },
+          {
+            "id": 2,
+            "title": "Set Host ACLs and Docker Desktop Permissions",
+            "description": "Modify host and Docker Desktop configuration to ensure the Docker Desktop user and containers running as UID 1001:GID 1001 have read/write access to all required mount points.",
+            "dependencies": [
+              "4.1"
+            ],
+            "details": "Adjust host filesystem ACLs and Docker Desktop file sharing settings to grant the necessary permissions for the specified UID/GID. Ensure that both Windows and NAS shares are accessible, and that Docker Desktop is configured to share C: and Z: drives as required.",
+            "status": "pending",
+            "testStrategy": "From within the container, create, modify, and delete files on all mounted paths. Confirm that permission errors do not occur for valid operations."
+          },
+          {
+            "id": 3,
+            "title": "Implement Secure Volume Mounts with Read-Only Binds",
+            "description": "Configure Docker Compose and Docker run commands to mount knowledge base source directories as read-only, following best practices for volume security.",
+            "dependencies": [
+              "4.1",
+              "4.2"
+            ],
+            "details": "Update Docker Compose and Docker run configurations to use the ':ro' flag for all mounts containing knowledge base sources. Document which mounts are read-only and which are read-write, and ensure no container can write to read-only sources.",
+            "status": "pending",
+            "testStrategy": "Attempt to write to read-only mounts from within the container and verify that permission is denied. Confirm that read operations succeed."
+          },
+          {
+            "id": 4,
+            "title": "Develop File Operation Manager for NAS and Artifact Handling",
+            "description": "Create a file operation manager component that debounces writes to NAS locations, implements batch artifact flushes, and handles permission errors gracefully.",
+            "dependencies": [
+              "4.2",
+              "4.3"
+            ],
+            "details": "Design and implement a service or utility that queues file writes to NAS, batches artifact flushes to optimize performance, and logs or recovers from permission errors without crashing. Ensure compatibility with the container's UID/GID and mount permissions.",
+            "status": "pending",
+            "testStrategy": "Perform rapid sequential writes and verify debouncing. Test batch artifact flushes with various file sizes. Simulate permission errors and confirm graceful handling."
+          },
+          {
+            "id": 5,
+            "title": "Document Host-Side and Container Permission Requirements",
+            "description": "Create comprehensive documentation detailing all host-side and container-side permission requirements, including ACLs, mount options, and user/group mappings.",
+            "dependencies": [
+              "4.1",
+              "4.2",
+              "4.3",
+              "4.4"
+            ],
+            "details": "Document the required host ACL settings, Docker Desktop configuration, container user/group setup, and volume mount options. Include troubleshooting steps for common permission errors and reference all relevant configuration files.",
+            "status": "pending",
+            "testStrategy": "Review documentation for completeness and clarity. Have a team member follow the documentation to set up permissions from scratch and verify all tests pass."
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Implement Performance Monitoring for Health/Latency Targets",
+        "description": "Create a monitoring system to track and ensure the health and latency targets specified in Appendix X.5 are met.",
+        "details": "Develop a performance monitoring subsystem that:\n\n1. Tracks filesystem change to watch detection latency\n   - Target: ≤250ms local, ≤750ms SMB\n   - Implement timing hooks in the filesystem watcher\n2. Measures rule addition to vector upsert performance\n   - Target: P50 ≤400ms, P95 ≤800ms\n   - Add instrumentation to vector database operations\n3. Times context package build operations\n   - Target: ≤2s for packages up to 1.5MB\n   - Instrument the context building pipeline\n\nImplement a metrics collection system that logs these measurements and provides alerts when targets are not met. Create a dashboard for visualizing performance metrics over time.",
+        "testStrategy": "Create automated tests that simulate each monitored operation and verify timing measurements are accurate. Run performance tests under various load conditions to ensure targets are consistently met. Validate alerting by intentionally causing performance degradation.",
+        "priority": "medium",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Instrument Filesystem Watcher for Latency Metrics",
+            "description": "Add timing hooks to the filesystem watcher to measure and record the latency from filesystem change to detection, supporting both local and SMB scenarios.",
+            "dependencies": [],
+            "details": "Implement precise timing instrumentation within the filesystem watcher component. Ensure metrics are tagged by source (local vs. SMB) and adhere to Docker security best practices, such as running as a non-root user and using structured logging. Integrate with the overall metrics collection system.",
+            "status": "pending",
+            "testStrategy": "Simulate file changes on both local and SMB mounts. Verify that latency measurements are accurately recorded and meet the specified targets (≤250ms local, ≤750ms SMB). Test under various load and network conditions."
+          },
+          {
+            "id": 2,
+            "title": "Instrument Vector Database for Rule Addition and Upsert Performance",
+            "description": "Add instrumentation to the vector database operations to measure the latency of rule addition and vector upsert, capturing P50 and P95 performance metrics.",
+            "dependencies": [],
+            "details": "Integrate timing hooks into the rule addition and vector upsert code paths. Ensure metrics are collected in a structured format and support correlation IDs for traceability. Follow Weaviate production patterns for resource allocation and batch imports. Metrics should be exportable to Prometheus-compatible systems.",
+            "status": "pending",
+            "testStrategy": "Run automated tests that perform rule additions and upserts at varying loads. Validate that P50 and P95 latency metrics are captured and alert if targets (P50 ≤400ms, P95 ≤800ms) are exceeded."
+          },
+          {
+            "id": 3,
+            "title": "Instrument Context Package Build Pipeline for Timing",
+            "description": "Add instrumentation to the context package build pipeline to measure build durations, ensuring compliance with the ≤2s target for packages up to 1.5MB.",
+            "dependencies": [],
+            "details": "Embed timing logic at the start and end of the context package build process. Ensure metrics are tagged by package size and build environment. Use structured logging and ensure compatibility with Docker container best practices (resource limits, health checks).",
+            "status": "pending",
+            "testStrategy": "Automate builds of context packages of varying sizes (including edge cases up to 1.5MB). Verify that timing metrics are accurate and that alerts trigger if builds exceed the 2s threshold."
+          },
+          {
+            "id": 4,
+            "title": "Implement Centralized Metrics Collection, Logging, and Alerting",
+            "description": "Develop a centralized system to collect, store, and aggregate performance metrics from all instrumented components, with alerting for threshold violations.",
+            "dependencies": [
+              "5.1",
+              "5.2",
+              "5.3"
+            ],
+            "details": "Deploy a metrics collection stack (e.g., Prometheus/Grafana) within Docker containers using secure configuration (secrets management, non-root users, resource limits). Implement structured logging with correlation IDs and configure alert rules for all monitored targets. Ensure resilience and high availability per distributed monitoring best practices.",
+            "status": "pending",
+            "testStrategy": "Inject synthetic latency and error scenarios to verify that metrics are collected, stored, and that alerts are triggered and delivered as expected. Test log aggregation and correlation across services."
+          },
+          {
+            "id": 5,
+            "title": "Develop Performance Monitoring Dashboard and Documentation",
+            "description": "Create a dashboard for visualizing performance metrics over time and document the monitoring system’s configuration, usage, and alerting policies.",
+            "dependencies": [
+              "5.4"
+            ],
+            "details": "Build a Grafana (or equivalent) dashboard with panels for each key metric (filesystem latency, vector upsert, context build times). Include historical trends, real-time views, and alert status. Document configuration options, environment-specific settings, and operational procedures. Ensure dashboard and documentation are accessible and secure.",
+            "status": "pending",
+            "testStrategy": "Review dashboard for completeness and usability. Validate that all metrics are visualized correctly and that documentation covers setup, troubleshooting, and alert response procedures."
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Develop Hybrid Agent for Cloud/Locked-Down Environments",
+        "description": "Implement the lightweight local agent described in Appendix X.6 for cloud-only or locked-down host environments.",
+        "details": "Create a lightweight agent in Go or Python that:\n\n1. Watches configured directories (C:, Z:, `/mnt/c`)\n2. Detects file system changes efficiently\n3. Streams events and file payloads over secure WebSocket or gRPC\n4. Connects to cloud-hosted MIRG instances\n5. Implements secure authentication and encryption\n6. Handles reconnection and state synchronization\n7. Minimizes resource usage on the host machine\n\nThe agent should be configurable via a simple config file and support both Windows and WSL environments. Implement proper error handling and logging.",
+        "testStrategy": "Test the agent on both Windows and WSL environments. Verify file change detection works correctly for all configured paths. Test secure connection establishment and reconnection scenarios. Measure resource usage under various load conditions. Validate end-to-end file change propagation to cloud MIRG instances.",
+        "priority": "low",
+        "dependencies": [
+          1,
+          2,
+          3
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Agent Architecture and Configuration",
+            "description": "Define the agent's modular architecture, configuration schema, and cross-platform support for Windows and WSL. Specify directory watching, resource constraints, and secure configuration management.",
+            "dependencies": [],
+            "details": "Establish a lightweight, modular agent structure in Go or Python. Design a simple config file format for specifying watched directories, connection endpoints, authentication, and resource limits. Ensure compatibility with both Windows and WSL environments. Integrate Docker best practices for secrets management, non-root execution, and resource limits.",
+            "status": "pending",
+            "testStrategy": "Validate configuration parsing, cross-platform compatibility, and correct application of resource constraints. Test with various config file scenarios and environment-specific overrides."
+          },
+          {
+            "id": 2,
+            "title": "Implement Efficient Filesystem Monitoring",
+            "description": "Develop the core logic for monitoring configured directories, detecting file system changes efficiently, and minimizing resource usage.",
+            "dependencies": [
+              "6.1"
+            ],
+            "details": "Use platform-appropriate APIs (e.g., inotify for Linux/WSL, ReadDirectoryChangesW for Windows) to watch specified directories. Implement event batching and filtering to reduce overhead. Ensure the agent can handle large numbers of files and high event rates without excessive CPU or memory usage.",
+            "status": "pending",
+            "testStrategy": "Test detection of file changes, additions, and deletions across all configured paths. Measure event latency and resource consumption under load. Validate correct operation on both Windows and WSL."
+          },
+          {
+            "id": 3,
+            "title": "Develop Secure Event Streaming and Communication Layer",
+            "description": "Implement secure, efficient streaming of file events and payloads to cloud-hosted MIRG instances using WebSocket or gRPC, with robust authentication and encryption.",
+            "dependencies": [
+              "6.2"
+            ],
+            "details": "Integrate secure WebSocket or gRPC clients with TLS encryption. Implement OAuth 2.0 or mutual TLS authentication. Support structured event streaming using JSON-RPC 2.0 or protobuf. Add connection resilience (exponential backoff, reconnection, state sync) and proper error handling. Follow Docker and WebSocket MCP best practices for connection management and logging.",
+            "status": "pending",
+            "testStrategy": "Test secure connection establishment, authentication, and encrypted data transfer. Simulate network interruptions to verify reconnection and state synchronization. Validate event delivery and error handling."
+          },
+          {
+            "id": 4,
+            "title": "Integrate Monitoring, Logging, and Resource Management",
+            "description": "Add comprehensive monitoring, structured logging, and resource usage controls to ensure reliability and observability.",
+            "dependencies": [
+              "6.3"
+            ],
+            "details": "Implement structured logging with correlation IDs and support for Docker logging drivers. Integrate Prometheus metrics for event rates, resource usage, and error counts. Enforce resource limits (CPU, memory) and implement health checks. Add graceful shutdown and circuit breaker patterns for external dependencies.",
+            "status": "pending",
+            "testStrategy": "Verify logging output, metrics collection, and alerting. Test enforcement of resource limits and graceful shutdown under stress. Validate health check endpoints and circuit breaker behavior."
+          },
+          {
+            "id": 5,
+            "title": "Package, Document, and Test Agent for Production Deployment",
+            "description": "Prepare the agent for production use with Docker packaging, documentation, integration tests, and deployment validation.",
+            "dependencies": [
+              "6.4"
+            ],
+            "details": "Create multi-stage Docker builds with minimal image size, non-root user, and AppArmor/SELinux profiles. Document all configuration options and deployment steps. Implement integration and load tests for end-to-end validation. Provide backup and upgrade strategies for agent state.",
+            "status": "pending",
+            "testStrategy": "Run integration and load tests in both Windows and WSL containers. Validate Docker security settings, upgrade procedures, and documentation completeness. Test backup and restore of agent state."
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Implement WebSocket Communication for MIRG ↔ Taskmaster MCP",
+        "description": "Develop the WebSocket-based communication system between MIRG and Taskmaster MCP as specified in Appendix Y.1.",
+        "details": "Create a bidirectional WebSocket communication system that:\n\n1. Connects MIRG to MCP using the `MCP_WS_URL` environment variable\n2. Implements MIRG → MCP message types:\n   - `memory.patch`: Append-only memory updates\n   - `job.request`: Job submission protocol\n3. Implements MCP → MIRG message types:\n   - `job.completed`: Job completion notifications\n   - `config.changed`: Configuration change events\n4. Triggers diff-reindex and cache invalidation in MIRG when appropriate\n5. Respects MCP ownership of replay and compaction\n6. Implements proper error handling, reconnection logic, and message queuing\n7. Ensures shared filesystem access to `/mcp` for memory files and job logs",
+        "testStrategy": "Create unit tests for each message type and direction. Implement integration tests that verify end-to-end communication between MIRG and MCP. Test reconnection scenarios and error handling. Validate that diff-reindex and cache invalidation are triggered correctly. Verify shared filesystem access works as expected.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          3
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Establish Secure WebSocket Connection and Authentication",
+            "description": "Implement a robust, secure WebSocket connection between MIRG and Taskmaster MCP using the MCP_WS_URL environment variable, incorporating OAuth 2.0 authentication for production and connection resilience (exponential backoff, proper close codes, and error messages).",
+            "dependencies": [],
+            "details": "Use a TypeScript SDK with type safety and JSON-RPC 2.0 message format. Ensure secrets management for MCP_WS_URL via Docker best practices. Apply Docker security recommendations (non-root user, AppArmor/SELinux, resource limits, health checks).",
+            "status": "pending",
+            "testStrategy": "Test connection establishment, authentication flows, reconnection logic, and health checks under various failure and recovery scenarios."
+          },
+          {
+            "id": 2,
+            "title": "Implement MIRG → MCP Message Protocols",
+            "description": "Develop handlers for MIRG-initiated message types (`memory.patch` for append-only memory updates and `job.request` for job submissions) using JSON-RPC 2.0, ensuring type safety and proper queuing during disconnections.",
+            "dependencies": [
+              "7.1"
+            ],
+            "details": "Integrate structured logging with correlation IDs. Ensure messages are queued and retried if the connection is interrupted. Respect MCP ownership of replay and compaction logic.",
+            "status": "pending",
+            "testStrategy": "Unit test each message type for correct formatting, queuing, and delivery. Simulate disconnections to verify message persistence and retry."
+          },
+          {
+            "id": 3,
+            "title": "Implement MCP → MIRG Message Protocols and Event Handling",
+            "description": "Develop handlers for MCP-initiated message types (`job.completed` and `config.changed`), including notification handlers for asynchronous events and request timeout handling.",
+            "dependencies": [
+              "7.1"
+            ],
+            "details": "Use the Protocol class for request/response and notification handling. Implement proper error handling with typed errors. Ensure that diff-reindex and cache invalidation in MIRG are triggered as specified.",
+            "status": "pending",
+            "testStrategy": "Unit and integration tests for each incoming message type, including event-driven triggers for diff-reindex and cache invalidation."
+          },
+          {
+            "id": 4,
+            "title": "Integrate Filesystem and Shared Resource Access",
+            "description": "Ensure secure, performant access to the shared `/mcp` filesystem for memory files and job logs, following Docker volume mount security and enforcing append-only and read-only access as appropriate.",
+            "dependencies": [
+              "7.2",
+              "7.3"
+            ],
+            "details": "Implement read-only binds where possible, enforce append-only writes for memory logs, and ensure proper permissions. Monitor and log filesystem access for auditability.",
+            "status": "pending",
+            "testStrategy": "Test access patterns for all required files, verify enforcement of append-only and read-only constraints, and validate logging of access events."
+          },
+          {
+            "id": 5,
+            "title": "Implement Monitoring, Logging, and Quality Assurance",
+            "description": "Set up comprehensive monitoring (Prometheus/Grafana), structured logging, circuit breakers for MCP dependency, integration tests, and documentation of all configuration options.",
+            "dependencies": [
+              "7.1",
+              "7.2",
+              "7.3",
+              "7.4"
+            ],
+            "details": "Implement health checks, structured logs with correlation IDs, and circuit breakers. Document configuration and operational procedures. Add performance benchmarks and load tests.",
+            "status": "pending",
+            "testStrategy": "Verify monitoring dashboards, log outputs, circuit breaker behavior, and run integration and load tests to validate system robustness."
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Implement Claude Code CLI Integration",
+        "description": "Develop the integration between MIRG and Claude Code CLI as specified in Appendix Y.2.",
+        "details": "Create an API and execution system that:\n\n1. Implements a REST endpoint `GET /api/cli-command?ids=&budget=` that:\n   - Generates validated `claude-code` commands\n   - Includes appropriate `--context` and `--memory-file` parameters\n   - Handles parameter validation and error cases\n2. Supports execution in sidecar mode:\n   - Uses `docker compose run claude-cli ...`\n   - Ensures shared mounts with MIRG (no copies)\n3. Supports execution on host:\n   - Reads from `.context/` on Z:/C: drives\n   - Ensures paths resolve identically without path surgery\n4. Implements proper error handling and logging\n5. Returns execution results in a structured format",
+        "testStrategy": "Test the API endpoint with various parameter combinations. Verify generated commands are valid and include correct context and memory file parameters. Test both sidecar and host execution modes. Validate path resolution works correctly in both environments. Test error handling with invalid inputs.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          3,
+          7
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design and Implement REST API Endpoint for CLI Command Generation",
+            "description": "Create a RESTful GET endpoint `/api/cli-command?ids=&budget=` that generates validated `claude-code` commands, including `--context` and `--memory-file` parameters, with robust parameter validation and error handling.",
+            "dependencies": [],
+            "details": "Follow REST API best practices for endpoint naming, HTTP method usage, input validation, and error response structure. Ensure the endpoint returns JSON responses and is documented with OpenAPI. Implement OAuth 2.0 authentication and structured logging with correlation IDs.",
+            "status": "pending",
+            "testStrategy": "Test endpoint with valid and invalid parameters, verify command generation, parameter validation, error responses, and authentication enforcement."
+          },
+          {
+            "id": 2,
+            "title": "Implement Sidecar Execution Mode with Secure Docker Integration",
+            "description": "Enable execution of generated commands in sidecar mode using `docker compose run claude-cli ...`, ensuring shared mounts with MIRG and no file copies.",
+            "dependencies": [
+              "8.1"
+            ],
+            "details": "Apply Docker best practices: use secrets management, read-only volume mounts where possible, non-root users, AppArmor/SELinux profiles, resource limits, health checks, specific image tags, and structured logging. Ensure shared mounts are secure and efficient.",
+            "status": "pending",
+            "testStrategy": "Test execution in sidecar mode, verify mount correctness, no file copies, resource limits, and security controls. Simulate failure scenarios for error handling."
+          },
+          {
+            "id": 3,
+            "title": "Implement Host Execution Mode with Path Resolution",
+            "description": "Support execution of commands on the host, reading from `.context/` on Z:/C: drives, ensuring path resolution is consistent and requires no path surgery.",
+            "dependencies": [
+              "8.1"
+            ],
+            "details": "Ensure the system can resolve and access context and memory files identically on both Windows and Linux hosts. Implement checks for path consistency and handle edge cases for cross-platform compatibility.",
+            "status": "pending",
+            "testStrategy": "Test host execution on both Windows and Linux, verify correct file access, and ensure path resolution is identical to sidecar mode."
+          },
+          {
+            "id": 4,
+            "title": "Implement Comprehensive Error Handling and Structured Logging",
+            "description": "Develop robust error handling for all execution paths and implement structured logging with correlation IDs for traceability.",
+            "dependencies": [
+              "8.1",
+              "8.2",
+              "8.3"
+            ],
+            "details": "Use structured logging frameworks, capture and log all errors with context, and ensure logs are compatible with Prometheus/Grafana monitoring. Implement graceful shutdown and circuit breakers for external dependencies.",
+            "status": "pending",
+            "testStrategy": "Inject faults and invalid inputs to verify error handling and logging. Check that logs contain necessary context and correlation IDs."
+          },
+          {
+            "id": 5,
+            "title": "Return Structured Execution Results and Documentation",
+            "description": "Ensure all execution results are returned in a structured JSON format and document the API, execution modes, and configuration options.",
+            "dependencies": [
+              "8.1",
+              "8.2",
+              "8.3",
+              "8.4"
+            ],
+            "details": "Define a consistent JSON schema for execution results, including status, output, errors, and metadata. Provide OpenAPI/Swagger documentation and document all configuration options and usage patterns.",
+            "status": "pending",
+            "testStrategy": "Validate response schema for all execution scenarios, verify documentation completeness, and test with integration and load tests."
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Implement IDE Integration",
+        "description": "Develop the integration between MIRG and IDEs (Cursor/VS Code/IntelliJ) as specified in Appendix Y.3.",
+        "details": "Create an IDE integration system that:\n\n1. Allows IDEs to read working trees from `C:\\GitHub` on the host\n2. Enables MIRG to index the same tree via `/host/github` bind mount\n3. Implements conflict policy:\n   - Treats IDE as the source of truth under `repo/`\n   - Prevents MIRG from mutating files without explicit instruction\n4. Creates necessary hooks or plugins for supported IDEs:\n   - Cursor\n   - VS Code\n   - IntelliJ\n5. Implements a safe mutation protocol when explicit write permission is granted\n6. Provides proper error handling and logging",
+        "testStrategy": "Test file access from both IDE and MIRG perspectives. Verify indexing works correctly through the bind mount. Test conflict scenarios to ensure IDE remains the source of truth. Validate that MIRG cannot mutate files without permission. Test the mutation protocol when permission is granted.",
+        "priority": "medium",
+        "dependencies": [
+          3,
+          4
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design and Implement Secure Host-Container Filesystem Bridge",
+            "description": "Establish a secure and performant mechanism for IDEs to access working trees from 'C:\\GitHub' and for MIRG to index the same tree via '/host/github' bind mount, following Docker best practices.",
+            "dependencies": [],
+            "details": "Implement Docker volume mounts with read-only binds for MIRG indexing, enforce non-root container users, and apply AppArmor/SELinux profiles. Ensure IDEs have direct access to the host path, and document the mapping logic. Integrate health checks and structured logging for mount status.",
+            "status": "pending",
+            "testStrategy": "Verify IDE and MIRG can access and index the same files. Test read-only enforcement for MIRG. Simulate mount failures and validate error logging and recovery."
+          },
+          {
+            "id": 2,
+            "title": "Implement IDE Hooks and Plugins for Supported Editors",
+            "description": "Develop and deploy integration hooks or plugins for Cursor, VS Code, and IntelliJ to enable seamless communication with MIRG and proper environment setup.",
+            "dependencies": [
+              "9.1"
+            ],
+            "details": "Create or configure plugins/extensions for each IDE to detect the working tree, manage environment variables, and communicate with MIRG via WebSocket MCP or other supported transports. Ensure compatibility with IDE-specific extension APIs and provide installation documentation.",
+            "status": "pending",
+            "testStrategy": "Install and activate plugins in each IDE. Confirm correct working tree detection and environment setup. Test communication with MIRG and validate error handling in plugin UI."
+          },
+          {
+            "id": 3,
+            "title": "Enforce Conflict Policy and Source-of-Truth Semantics",
+            "description": "Implement logic to treat the IDE as the source of truth under 'repo/' and prevent MIRG from mutating files without explicit instruction, enforcing the specified conflict policy.",
+            "dependencies": [
+              "9.1",
+              "9.2"
+            ],
+            "details": "Develop a policy enforcement layer that intercepts file operations from MIRG, blocks unauthorized mutations, and logs all access attempts. Integrate with IDE plugins to notify users of potential conflicts and provide override mechanisms for explicit write permissions.",
+            "status": "pending",
+            "testStrategy": "Simulate concurrent file operations from IDE and MIRG. Attempt unauthorized mutations from MIRG and verify they are blocked. Test explicit write permission flow and ensure correct logging."
+          },
+          {
+            "id": 4,
+            "title": "Implement Safe Mutation Protocol and Explicit Write Permissions",
+            "description": "Develop a protocol for safe file mutations by MIRG, requiring explicit user permission and ensuring atomic, auditable changes.",
+            "dependencies": [
+              "9.3"
+            ],
+            "details": "Design a mutation request/approval workflow, possibly using JSON-RPC over WebSocket MCP, with typed error handling and request timeouts. Ensure all mutations are logged with correlation IDs and provide rollback mechanisms in case of failure.",
+            "status": "pending",
+            "testStrategy": "Request file mutations from MIRG and verify user approval is required. Test atomicity and rollback on failure. Validate structured logging and audit trails for all mutation events."
+          },
+          {
+            "id": 5,
+            "title": "Integrate Comprehensive Error Handling, Logging, and Monitoring",
+            "description": "Establish robust error handling, structured logging, and monitoring across all integration components, following production best practices.",
+            "dependencies": [
+              "9.1",
+              "9.2",
+              "9.3",
+              "9.4"
+            ],
+            "details": "Implement structured logging with correlation IDs, integrate Prometheus/Grafana for monitoring, and ensure all errors are captured with actionable messages. Add health checks for all services and document configuration options for observability.",
+            "status": "pending",
+            "testStrategy": "Induce errors and verify they are logged and surfaced in monitoring dashboards. Test health check endpoints and validate alerting for integration failures."
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Implement Filesystem Watcher",
+        "description": "Develop a filesystem watcher that monitors changes across all relevant mount points with the performance targets specified in Appendix X.5.",
+        "details": "Create a filesystem watcher that:\n\n1. Monitors all relevant paths across different mount types:\n   - Local filesystem (C:)\n   - Network shares (Z:)\n   - WSL paths (/mnt/c)\n2. Meets performance targets:\n   - ≤250ms detection for local changes\n   - ≤750ms detection for SMB/network changes\n3. Handles different file event types (create, modify, delete)\n4. Implements debouncing to prevent duplicate events\n5. Provides a consistent event interface regardless of underlying filesystem\n6. Handles permission issues and inaccessible paths gracefully\n7. Supports filtering by file pattern/extension\n8. Minimizes resource usage, especially on network paths",
+        "testStrategy": "Measure detection latency for different filesystem types under various load conditions. Test with different file sizes and operation types. Verify debouncing works correctly for rapid sequential changes. Test error handling with inaccessible paths and permission issues. Validate resource usage remains within acceptable limits.",
+        "priority": "high",
+        "dependencies": [
+          1,
+          3,
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Multi-Mount Filesystem Monitoring Architecture",
+            "description": "Define and architect a watcher system capable of monitoring local filesystems, network shares (SMB), and WSL paths, ensuring compatibility with Docker volume mounts and security best practices.",
+            "dependencies": [],
+            "details": "Specify how to enumerate and monitor all relevant mount points (C:, Z:, /mnt/c), considering platform-specific APIs (e.g., inotify, FSEvents, Windows API). Incorporate Docker best practices for volume security, non-root execution, and resource limits. Document the architecture for extensibility and security.",
+            "status": "pending",
+            "testStrategy": "Verify detection of all mount types in a controlled environment. Test with Docker containers using read-only and read-write mounts. Confirm watcher initialization does not escalate privileges or violate container security policies."
+          },
+          {
+            "id": 2,
+            "title": "Implement High-Performance Event Detection and Debouncing",
+            "description": "Develop the core event detection logic to capture create, modify, and delete events with required latency targets and implement debouncing to suppress duplicate or rapid-fire events.",
+            "dependencies": [
+              "10.1"
+            ],
+            "details": "Use platform-appropriate APIs for event detection (e.g., FileSystemWatcher, inotify, Watchdog). Implement debouncing logic to aggregate rapid events and prevent duplicate notifications. Ensure detection latency is ≤250ms for local and ≤750ms for network paths. Integrate structured logging with correlation IDs.",
+            "status": "pending",
+            "testStrategy": "Simulate rapid file operations and measure detection latency. Validate that debouncing suppresses redundant events. Use performance benchmarks to confirm latency targets are met under load."
+          },
+          {
+            "id": 3,
+            "title": "Normalize and Filter Filesystem Events",
+            "description": "Create a consistent event interface that abstracts differences between underlying filesystems and supports filtering by file pattern or extension.",
+            "dependencies": [
+              "10.2"
+            ],
+            "details": "Define a unified event schema (e.g., JSON-RPC 2.0 format) for all event types. Implement pattern-based filtering (e.g., *.md, *.zip) at the watcher level. Ensure event normalization regardless of source (local, SMB, WSL).",
+            "status": "pending",
+            "testStrategy": "Generate events from different filesystems and verify consistent event payloads. Test filtering logic with various patterns and extensions. Validate event schema compliance."
+          },
+          {
+            "id": 4,
+            "title": "Implement Robust Error and Permission Handling",
+            "description": "Ensure the watcher gracefully handles permission errors, inaccessible paths, and transient network issues, providing actionable error messages and maintaining system stability.",
+            "dependencies": [
+              "10.3"
+            ],
+            "details": "Integrate error handling for permission-denied, path-not-found, and network timeouts. Use typed errors and structured logging. Implement circuit breakers for repeated failures on network paths. Document all error scenarios and recovery strategies.",
+            "status": "pending",
+            "testStrategy": "Simulate permission errors and network outages. Verify watcher logs errors without crashing and resumes monitoring when possible. Confirm circuit breaker activation and recovery."
+          },
+          {
+            "id": 5,
+            "title": "Optimize Resource Usage and Integrate Monitoring",
+            "description": "Minimize CPU and memory usage, especially for network paths, and implement comprehensive monitoring and health checks for the watcher service.",
+            "dependencies": [
+              "10.4"
+            ],
+            "details": "Profile watcher resource usage and optimize polling intervals or event subscriptions. Implement Prometheus/Grafana metrics for event rates, latency, and resource consumption. Add health checks and structured logs for operational visibility. Apply Docker resource limits and Weaviate-style memory management patterns.",
+            "status": "pending",
+            "testStrategy": "Run load and stress tests to measure resource usage. Validate monitoring dashboards and health check endpoints. Confirm watcher remains responsive under high event rates and constrained resources."
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Implement Memory Management System",
+        "description": "Develop the memory management system that handles append-only memory logs and delta patches as specified in Appendix Y.1.",
+        "details": "Create a memory management system that:\n\n1. Manages append-only memory logs in `/mcp/memory/*.md`\n2. Implements delta patch writing for MIRG\n3. Respects MCP as the source of truth\n4. Handles concurrent access safely\n5. Implements efficient patch generation and application\n6. Provides an API for reading and updating memory\n7. Handles error cases and conflicts gracefully\n8. Implements proper locking mechanisms\n9. Provides logging and debugging capabilities",
+        "testStrategy": "Test concurrent read/write scenarios to ensure data integrity. Verify delta patches are generated and applied correctly. Test conflict resolution when multiple sources attempt to update memory. Validate that MCP remains the source of truth. Test error handling with corrupted or inaccessible memory files.",
+        "priority": "high",
+        "dependencies": [
+          3,
+          7
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Append-Only Memory Log Architecture",
+            "description": "Define the structure and storage format for append-only memory logs in `/mcp/memory/*.md`, ensuring compatibility with MCP as the source of truth and supporting efficient concurrent access.",
+            "dependencies": [],
+            "details": "Specify file formats, append-only constraints, and metadata requirements. Incorporate locking mechanisms and plan for structured logging. Ensure the design supports Docker volume mount security and non-root user access.",
+            "status": "pending",
+            "testStrategy": "Test log creation, append operations, and concurrent access scenarios. Validate that logs remain append-only and that unauthorized modifications are prevented."
+          },
+          {
+            "id": 2,
+            "title": "Implement Delta Patch Generation and Application",
+            "description": "Develop mechanisms to generate and apply delta patches for MIRG, optimizing for efficient storage and retrieval while maintaining data integrity.",
+            "dependencies": [
+              "11.1"
+            ],
+            "details": "Design algorithms for patch creation and application. Ensure patches are atomic, support conflict detection, and integrate with the append-only log system. Follow best practices for memory management and error handling.",
+            "status": "pending",
+            "testStrategy": "Verify correct patch generation and application through unit and integration tests. Simulate conflicting updates and ensure proper resolution."
+          },
+          {
+            "id": 3,
+            "title": "Develop Safe Concurrent Access and Locking Mechanisms",
+            "description": "Implement robust concurrency controls and locking strategies to ensure safe access to memory logs and patches, preventing data races and corruption.",
+            "dependencies": [
+              "11.1",
+              "11.2"
+            ],
+            "details": "Integrate file-level or in-memory locks, leveraging Docker and OS-level primitives where appropriate. Ensure compatibility with multi-process and multi-threaded environments. Provide structured logging for lock events.",
+            "status": "pending",
+            "testStrategy": "Test concurrent read/write operations under load. Intentionally induce race conditions to verify that locks prevent data corruption."
+          },
+          {
+            "id": 4,
+            "title": "Expose Memory Management API with Error and Conflict Handling",
+            "description": "Provide a well-documented API for reading and updating memory, supporting both append-only logs and delta patches, with comprehensive error and conflict handling.",
+            "dependencies": [
+              "11.1",
+              "11.2",
+              "11.3"
+            ],
+            "details": "Design API endpoints or interfaces with clear input/output contracts. Implement structured error responses, conflict resolution strategies, and logging. Ensure type safety and transport compatibility (e.g., JSON-RPC 2.0, HTTP, stdio).",
+            "status": "pending",
+            "testStrategy": "Write integration and API tests covering normal, error, and conflict scenarios. Validate error messages and conflict resolution logic."
+          },
+          {
+            "id": 5,
+            "title": "Integrate Monitoring, Logging, and Debugging Capabilities",
+            "description": "Implement comprehensive monitoring, structured logging (with correlation IDs), and debugging tools for the memory management system, ensuring observability and maintainability.",
+            "dependencies": [
+              "11.1",
+              "11.2",
+              "11.3",
+              "11.4"
+            ],
+            "details": "Set up Prometheus/Grafana monitoring, structured logs, and health checks. Document configuration options and provide mechanisms for graceful shutdown and recovery. Ensure logs capture access, errors, and patch events.",
+            "status": "pending",
+            "testStrategy": "Validate monitoring dashboards, log outputs, and alerting under normal and failure conditions. Test log correlation and debugging workflows."
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Create Comprehensive Documentation",
+        "description": "Develop comprehensive documentation for the MIRG runtime system, covering all aspects of the implementation.",
+        "details": "Create documentation that includes:\n\n1. System architecture overview\n2. Setup and configuration instructions\n3. Mount point requirements and permissions\n4. Docker Compose profile usage\n5. Filesystem contract details and enforcement mechanisms\n6. Performance targets and monitoring\n7. Integration points with MCP, Claude CLI, and IDEs\n8. Hybrid agent setup and configuration\n9. Troubleshooting guide\n10. API reference\n11. Security considerations\n12. Examples and tutorials\n\nThe documentation should be clear, concise, and accessible to both developers and operators. Include diagrams where appropriate to illustrate system components and interactions.",
+        "testStrategy": "Review documentation for accuracy and completeness. Have different team members attempt to follow the documentation to verify clarity. Test examples and tutorials to ensure they work as described. Validate API reference against actual implementation.",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Draft System Architecture and Integration Overview",
+            "description": "Document the MIRG runtime system's architecture, including component diagrams, data flows, and integration points with MCP, Claude CLI, IDEs, and hybrid agents.",
+            "dependencies": [],
+            "details": "Include high-level diagrams illustrating system components and their interactions. Clearly describe how the MIRG runtime integrates with external systems such as MCP (with WebSocket/JSON-RPC details), Claude CLI, and IDEs. Highlight hybrid agent setup and configuration, referencing best practices for WebSocket MCP (TypeScript SDK, OAuth 2.0, error handling, connection resilience).",
+            "status": "pending",
+            "testStrategy": "Review diagrams and integration descriptions with engineering leads. Validate integration steps by setting up a test environment and confirming connectivity between MIRG, MCP, Claude CLI, and IDEs."
+          },
+          {
+            "id": 2,
+            "title": "Develop Setup, Configuration, and Security Documentation",
+            "description": "Provide detailed setup and configuration instructions, including Docker Compose profile usage, mount point requirements, environment variables, and security considerations.",
+            "dependencies": [
+              "12.1"
+            ],
+            "details": "Cover Docker Compose profiles for different environments, volume mount requirements, permissions, and environment-specific configurations. Incorporate Docker best practices: secrets management, non-root users, AppArmor/SELinux, resource limits, structured logging, and network isolation. Document all configuration options and security measures, including OAuth 2.0 for MCP and filesystem contract enforcement.",
+            "status": "pending",
+            "testStrategy": "Have team members follow setup instructions on clean systems for each profile. Validate that security controls (e.g., non-root, secrets, AppArmor) are enforced as documented."
+          },
+          {
+            "id": 3,
+            "title": "Document Filesystem Contracts, Enforcement, and API Reference",
+            "description": "Detail the filesystem contract, enforcement mechanisms, mount point requirements, and provide a comprehensive API reference.",
+            "dependencies": [
+              "12.2"
+            ],
+            "details": "Describe the expected filesystem structure, permissions, and enforcement mechanisms. Include mount point requirements, read-only binds, and contract validation logic. Provide a complete API reference for MIRG, including endpoints, parameters, authentication, and error codes. Reference Docker and Weaviate production patterns for volume and data management.",
+            "status": "pending",
+            "testStrategy": "Cross-check documentation against implementation. Use automated tests to validate contract enforcement and API correctness. Ensure API reference matches actual endpoints and behaviors."
+          },
+          {
+            "id": 4,
+            "title": "Compile Performance, Monitoring, and Troubleshooting Guide",
+            "description": "Define performance targets, monitoring strategies, and provide a troubleshooting guide for common issues.",
+            "dependencies": [
+              "12.3"
+            ],
+            "details": "Specify performance benchmarks, resource limits, and monitoring setup using Prometheus/Grafana. Document structured logging with correlation IDs, health checks, and circuit breakers. Provide troubleshooting steps for setup, integration, and runtime errors, referencing logs and monitoring dashboards. Include guidance for Weaviate scaling, backup, and zero-downtime upgrades.",
+            "status": "pending",
+            "testStrategy": "Simulate performance and failure scenarios. Validate that monitoring and logging provide actionable insights. Test troubleshooting steps by intentionally misconfiguring components and resolving issues using the guide."
+          },
+          {
+            "id": 5,
+            "title": "Create Examples, Tutorials, and Validation Procedures",
+            "description": "Develop practical examples and tutorials for developers and operators, and define validation procedures for documentation accuracy.",
+            "dependencies": [
+              "12.4"
+            ],
+            "details": "Provide step-by-step tutorials for common workflows (e.g., initial setup, hybrid agent configuration, API usage). Include sample Docker Compose files, configuration snippets, and integration examples. Define procedures for reviewing documentation, testing examples, and validating that instructions work as described.",
+            "status": "pending",
+            "testStrategy": "Assign team members to follow tutorials and report issues. Validate that all examples execute successfully in test environments. Review feedback and update documentation as needed."
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Implement Taskmaster AI MCP 2.0 Integration",
+        "description": "Develop the integration between MIRG and Taskmaster AI MCP 2.0 for project bootstrapping, bidirectional sync, and memory-share hooks.",
+        "details": "Create a module that handles:\n1. Project sensing by parsing `.taskmaster/config.json` and `.env.mcp` at startup\n2. Hydrate configuration variables: `IDE_TARGETS`, `KB_ROOT`, `TOKEN_BUDGETS`, `MCP_WS_URL`\n3. Implement Zod validation schemas for configuration\n4. Set up WebSocket connection to MCP using the `MCP_WS_URL`\n5. Implement outbound rule mutations that emit `memory.patch` via MCP WebSocket\n6. Handle inbound `job.completed` or `config.changed` events to trigger diff-based reindex and cache invalidation\n7. Implement folder contracts for `.cursor/rules/`, `.clinerules/`, `.roo/` as mount points\n8. Ensure MIRG writes new/updated rules but never deletes\n9. Implement append-only behavior for `.taskmaster/memory.md` with deduplication in optimizer",
+        "testStrategy": "1. Unit tests for configuration parsing and validation\n2. Mock WebSocket server to test bidirectional communication\n3. Integration tests for folder contract enforcement\n4. End-to-end test for project bootstrapping via `taskmaster init rules-generator`\n5. Verify correct handling of inbound/outbound events\n6. Test append-only behavior with deduplication",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Project Sensing and Configuration Hydration",
+            "description": "Develop logic to parse `.taskmaster/config.json` and `.env.mcp` at startup, hydrating configuration variables such as `IDE_TARGETS`, `KB_ROOT`, `TOKEN_BUDGETS`, and `MCP_WS_URL`.",
+            "dependencies": [],
+            "details": "Ensure robust parsing with fallback defaults, secrets management for sensitive values, and environment-specific overrides. Apply Docker best practices for secrets and environment variable handling.",
+            "status": "pending",
+            "testStrategy": "Unit tests for parsing and hydration, including malformed and missing config scenarios. Validate secrets are not exposed in logs."
+          },
+          {
+            "id": 2,
+            "title": "Implement Configuration Validation with Zod Schemas",
+            "description": "Define and enforce Zod validation schemas for all configuration variables to ensure type safety and early error detection.",
+            "dependencies": [
+              "13.1"
+            ],
+            "details": "Create comprehensive Zod schemas for each config section. Integrate validation into the startup sequence, halting execution on validation failure. Document all configuration options and validation rules.",
+            "status": "pending",
+            "testStrategy": "Unit tests for schema validation, including positive and negative cases. Integration test to verify startup fails on invalid config."
+          },
+          {
+            "id": 3,
+            "title": "Establish Secure WebSocket MCP Connection",
+            "description": "Set up a resilient, authenticated WebSocket connection to MCP using `MCP_WS_URL`, supporting JSON-RPC 2.0, OAuth 2.0 authentication, and robust error handling.",
+            "dependencies": [
+              "13.2"
+            ],
+            "details": "Use the TypeScript SDK with strict type safety. Implement exponential backoff for reconnection, proper close codes, and request timeout handling. Apply Docker network isolation and resource limits for the connection module.",
+            "status": "pending",
+            "testStrategy": "Mock WebSocket server tests for connection, authentication, error handling, and reconnection logic. Security tests for OAuth token handling."
+          },
+          {
+            "id": 4,
+            "title": "Implement Bidirectional Rule Sync and Memory Patch Emission",
+            "description": "Develop logic for outbound rule mutations emitting `memory.patch` via MCP WebSocket, and handle inbound `job.completed` or `config.changed` events to trigger diff-based reindex and cache invalidation.",
+            "dependencies": [
+              "13.3"
+            ],
+            "details": "Ensure append-only behavior for `.taskmaster/memory.md` with deduplication. Enforce folder contracts for `.cursor/rules/`, `.clinerules/`, and `.roo/` as mount points. MIRG must write new/updated rules but never delete.",
+            "status": "pending",
+            "testStrategy": "Integration tests for outbound/inbound event handling, append-only enforcement, and deduplication. End-to-end tests for rule sync and memory patch flows."
+          },
+          {
+            "id": 5,
+            "title": "Integrate Monitoring, Logging, and Documentation",
+            "description": "Implement structured logging with correlation IDs, Prometheus/Grafana monitoring, and comprehensive documentation for configuration and integration flows.",
+            "dependencies": [
+              "13.4"
+            ],
+            "details": "Set up health checks, structured logs, and circuit breakers for external dependencies. Document all configuration options, folder contracts, and integration points. Ensure graceful shutdown and backup strategies are in place.",
+            "status": "pending",
+            "testStrategy": "Monitoring and logging validation tests, documentation review, and simulated failure scenarios to verify graceful shutdown and alerting."
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "Develop Knowledge-Base (KB) Pipeline",
+        "description": "Create a resilient knowledge-base pipeline with Weaviate and LangChain for recursive coverage, incremental diffing, advanced metadata, and knowledge-graph visualization.",
+        "details": "1. Implement a loader that runs on cron or MCP event every 60s (or on demand)\n2. Use SHA-256 hashing per file to skip unchanged files\n3. Maintain per-file status tracking\n4. Create parsers for `.md`, `.mdc`, `.json`, and `.prompt` file formats\n5. Extract metadata: `ide`, `framework`, `tier`, `tags`, `estimatedTokens`\n6. Implement embedder with chunking ≤ 1,000 tokens\n7. Use OpenAI Ada 3 for embeddings\n8. Implement batch upsert (≤ 512/doc op) into Weaviate HNSW\n9. Persist metadata alongside embeddings\n10. Create `/admin/audit-kb` endpoint that returns totals, embedded count, parse/embedding errors, orphan files, missing metadata\n11. Implement UI for coverage heatmaps",
+        "testStrategy": "1. Unit tests for file hashing and change detection\n2. Parser tests for each supported file format\n3. Integration tests for embedding process\n4. End-to-end tests for the full KB pipeline\n5. Performance tests for batch operations\n6. Validation of audit endpoint responses\n7. UI tests for coverage heatmaps",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design and Implement Secure, Resilient Loader and File Change Detection",
+            "description": "Develop a loader service that runs on a schedule or via MCP event, detects file changes using SHA-256 hashing, and maintains per-file status tracking. Ensure Docker containerization follows best practices for security, resource limits, and health checks.",
+            "dependencies": [],
+            "details": "The loader must support cron/MCP triggers, securely manage secrets, use non-root users, and implement structured logging. File change detection should efficiently skip unchanged files and update status tracking. Docker images must use multi-stage builds, specific tags, and enforce volume and network isolation.",
+            "status": "pending",
+            "testStrategy": "Unit tests for hashing and change detection, integration tests for loader scheduling, and container security validation."
+          },
+          {
+            "id": 2,
+            "title": "Develop Multi-Format File Parsers and Metadata Extraction",
+            "description": "Create robust parsers for `.md`, `.mdc`, `.json`, and `.prompt` files, extracting advanced metadata fields including ide, framework, tier, tags, and estimatedTokens.",
+            "dependencies": [
+              "14.1"
+            ],
+            "details": "Parsers must handle all supported formats, extract and validate required metadata, and gracefully handle malformed files. Implement comprehensive error handling and structured logging with correlation IDs.",
+            "status": "pending",
+            "testStrategy": "Parser unit tests for each file type, metadata extraction validation, and error handling coverage."
+          },
+          {
+            "id": 3,
+            "title": "Implement Embedding Pipeline with Chunking and OpenAI Ada 3 Integration",
+            "description": "Integrate an embedder that chunks content to ≤1,000 tokens, uses OpenAI Ada 3 for embeddings, and supports batch upsert (≤512/doc op) into Weaviate HNSW, persisting metadata alongside embeddings.",
+            "dependencies": [
+              "14.2"
+            ],
+            "details": "Ensure chunking logic is robust, batch upserts are optimized for Weaviate performance, and all metadata is stored with embeddings. Use environment-specific configs for OpenAI keys and monitor resource usage. Follow Weaviate production patterns for scaling and memory management.",
+            "status": "pending",
+            "testStrategy": "Integration tests for embedding and upsert, performance/load tests for batch operations, and validation of metadata persistence."
+          },
+          {
+            "id": 4,
+            "title": "Develop Audit, Monitoring, and Visualization Endpoints",
+            "description": "Implement the `/admin/audit-kb` endpoint to report totals, embedded counts, errors, orphans, and missing metadata. Build UI components for coverage heatmaps and integrate Prometheus/Grafana monitoring.",
+            "dependencies": [
+              "14.3"
+            ],
+            "details": "The audit endpoint must aggregate and expose pipeline health metrics. UI should visualize coverage and error states. Monitoring must include structured logs, circuit breakers for dependencies, and graceful shutdown handling.",
+            "status": "pending",
+            "testStrategy": "API endpoint validation, UI tests for heatmaps, monitoring alert tests, and integration tests for error reporting."
+          },
+          {
+            "id": 5,
+            "title": "Integrate Knowledge-Graph Visualization and Advanced Metadata Management",
+            "description": "Enable recursive coverage, incremental diffing, and knowledge-graph visualization using LangChain and Weaviate. Store and expose advanced metadata for downstream graph and rule automation.",
+            "dependencies": [
+              "14.4"
+            ],
+            "details": "Leverage LangChain-Weaviate integration for knowledge-graph construction and visualization. Implement incremental diffing logic and ensure metadata completeness for all KB objects. Document all configuration options and add integration tests for graph features.",
+            "status": "pending",
+            "testStrategy": "End-to-end tests for recursive coverage, diffing, and visualization; metadata completeness validation; and performance/load tests for graph queries."
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "Implement Rule CRUD and Versioning",
+        "description": "Develop end-to-end rule CRUD via UI, REST, GraphQL, and CLI with versioning, audit logging, and optional approval workflows.",
+        "details": "1. Implement REST endpoints:\n   - `POST /api/rules/add` - Create new rules with content and metadata\n   - `PUT /api/rules/{id}` - Update existing rules with partial updates\n   - `DELETE /api/rules/{id}` - Soft delete rules with audit logging\n   - `POST /api/rules/batch-import` - Handle ZIP uploads for bulk imports\n   - `GET /api/rules/search` - Search rules with filters\n   - `GET /api/rules/{id}/history` - Get version history and diffs\n2. Implement JWT authentication with roles (`user`, `dev`, `admin`)\n3. Create Zod validation schemas for all endpoints\n4. Set up pino structured logging\n5. Implement semver versioning for rules\n6. Create audit logging system that tracks all changes\n7. For batch imports, implement async job processing with SSE progress updates\n8. Implement soft-delete functionality with optional admin-only hard-delete",
+        "testStrategy": "1. Unit tests for each endpoint\n2. Authentication and authorization tests\n3. Validation tests for input schemas\n4. Integration tests for database operations\n5. End-to-end API tests\n6. Performance tests for batch operations\n7. Audit log verification tests",
+        "priority": "high",
+        "dependencies": [
+          14
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design and Implement Rule CRUD APIs with Multi-Interface Support",
+            "description": "Develop REST, GraphQL, CLI, and UI endpoints for rule creation, reading, updating, deleting, and searching, ensuring consistent resource-oriented URL design and HTTP verb usage across all interfaces.",
+            "dependencies": [],
+            "details": "Define resource URIs using nouns for all CRUD operations, implement controller logic for each endpoint, and ensure all interfaces (REST, GraphQL, CLI, UI) provide equivalent functionality. Document all endpoints and expected request/response formats.",
+            "status": "pending",
+            "testStrategy": "Unit and integration tests for each endpoint/interface; verify correct CRUD behavior and consistent results across all interfaces."
+          },
+          {
+            "id": 2,
+            "title": "Implement Rule Versioning and History Tracking",
+            "description": "Integrate semantic versioning for rules, maintain version history, and provide endpoints to retrieve historical versions and diffs.",
+            "dependencies": [
+              "15.1"
+            ],
+            "details": "Apply semver versioning to each rule change, store historical versions, and expose endpoints for retrieving version history and diffs. Ensure batch imports and updates increment versions appropriately.",
+            "status": "pending",
+            "testStrategy": "Tests for version increment logic, retrieval of historical versions, and accuracy of diff outputs."
+          },
+          {
+            "id": 3,
+            "title": "Develop Audit Logging and Approval Workflow System",
+            "description": "Create a structured audit logging system for all rule changes and implement optional approval workflows for sensitive operations.",
+            "dependencies": [
+              "15.1",
+              "15.2"
+            ],
+            "details": "Log all CRUD and versioning actions with correlation IDs, user roles, and timestamps. Implement approval workflow logic for create/update/delete actions as needed, and ensure audit logs are queryable and exportable.",
+            "status": "pending",
+            "testStrategy": "Audit log verification tests, workflow approval/rejection scenarios, and log integrity checks."
+          },
+          {
+            "id": 4,
+            "title": "Integrate Security, Validation, and Monitoring Best Practices",
+            "description": "Enforce JWT authentication with role-based access, validate all inputs using Zod schemas, and implement structured logging, monitoring, and resource controls following Docker and general security best practices.",
+            "dependencies": [
+              "15.1"
+            ],
+            "details": "Set up JWT authentication for all endpoints with user, dev, and admin roles. Apply Zod validation to all inputs. Use pino for structured logging, correlation IDs, and integrate Prometheus/Grafana for monitoring. Apply Docker security and resource management recommendations.",
+            "status": "pending",
+            "testStrategy": "Authentication/authorization tests, validation error tests, logging/monitoring configuration checks, and security compliance tests."
+          },
+          {
+            "id": 5,
+            "title": "Implement Batch Import, Async Processing, and Resilience Features",
+            "description": "Develop batch import functionality with async job processing, SSE progress updates, and robust error handling. Ensure system resilience and graceful shutdown.",
+            "dependencies": [
+              "15.1",
+              "15.4"
+            ],
+            "details": "Handle ZIP uploads for bulk rule imports, process jobs asynchronously, and provide real-time progress via SSE. Implement error handling, request timeouts, and graceful shutdown. Apply circuit breakers for external dependencies and ensure Docker/Weaviate production patterns are followed for scaling and reliability.",
+            "status": "pending",
+            "testStrategy": "Performance and load tests for batch imports, SSE progress validation, error and timeout scenario tests, and resilience/failover tests."
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "Build Token-Budget Optimizer",
+        "description": "Create a token-budget optimizer with priority-weighted selection and optional genetic compression fallback.",
+        "details": "1. Implement scoring algorithm: Score = `(priorityWeight × semanticRelevance) / tokenCount`\n2. Sort rules by score in descending order\n3. Accumulate rules until sum(tokens) ≥ budget\n4. If overflow ≤ 5%, truncate tail\n5. For larger overflows, implement optional genetic compression\n6. Add multi-file split recommendation functionality\n7. Create endpoint: `GET /api/optimize?budget=8000&ide=cursor`\n8. Return ordered rule list, `totalTokens`, `estimatedUsage%`, and optional split plan\n9. Integrate with `tiktoken` or TypeScript tokenizer for token estimation\n10. Implement caching for optimization results to improve performance",
+        "testStrategy": "1. Unit tests for scoring algorithm\n2. Tests for accumulation and truncation logic\n3. Tests for genetic compression (if implemented)\n4. Integration tests with real rule data\n5. Performance tests with large rule sets\n6. Validation of token budget compliance\n7. End-to-end API tests",
+        "priority": "high",
+        "dependencies": [
+          15
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design and Implement Priority-Weighted Scoring and Selection Algorithm",
+            "description": "Develop the core algorithm to score rules using the formula (priorityWeight × semanticRelevance) / tokenCount, sort them in descending order, and accumulate rules until the token budget is reached.",
+            "dependencies": [],
+            "details": "Ensure the scoring function is robust and integrates accurate token counting using tiktoken or a TypeScript tokenizer. Incorporate best practices for performance and maintainability, including caching mechanisms for repeated optimization requests.",
+            "status": "pending",
+            "testStrategy": "Unit test the scoring, sorting, and accumulation logic with diverse rule sets. Validate token counting accuracy and caching effectiveness."
+          },
+          {
+            "id": 2,
+            "title": "Implement Overflow Handling and Genetic Compression Fallback",
+            "description": "Add logic to handle cases where the accumulated rules exceed the token budget. If overflow is ≤5%, truncate the tail; otherwise, trigger an optional genetic compression algorithm to fit within the budget.",
+            "dependencies": [
+              "16.1"
+            ],
+            "details": "Research and implement a genetic compression strategy suitable for rule sets, ensuring minimal loss of semantic relevance. Integrate overflow detection and fallback logic into the main optimizer.",
+            "status": "pending",
+            "testStrategy": "Test overflow scenarios with varying rule sizes. Validate that truncation and genetic compression both maintain rule quality and budget compliance."
+          },
+          {
+            "id": 3,
+            "title": "Develop Multi-File Split Recommendation and Output Formatting",
+            "description": "Create logic to recommend splitting rules across multiple files when the token budget is exceeded, and format the output to include the ordered rule list, totalTokens, estimatedUsage%, and optional split plan.",
+            "dependencies": [
+              "16.2"
+            ],
+            "details": "Incorporate strategies for optimal file splitting based on rule grouping and token distribution. Ensure output structure is consistent and easily consumable by downstream systems.",
+            "status": "pending",
+            "testStrategy": "Test with large rule sets to verify split recommendations and output formatting. Validate correctness and usability of the split plan."
+          },
+          {
+            "id": 4,
+            "title": "Build and Secure the Optimization API Endpoint",
+            "description": "Implement the GET /api/optimize endpoint, integrating the optimizer logic, and apply security and best practices for Docker, WebSocket MCP, and Weaviate environments.",
+            "dependencies": [
+              "16.3"
+            ],
+            "details": "Ensure endpoint supports query parameters (budget, ide), uses structured logging, and is secured with proper authentication and resource limits. Integrate with Docker secrets, non-root users, and health checks as per best practices.",
+            "status": "pending",
+            "testStrategy": "End-to-end API tests for correctness, security, and performance. Validate logging, authentication, and resource isolation."
+          },
+          {
+            "id": 5,
+            "title": "Integrate Monitoring, Caching, and Documentation",
+            "description": "Add comprehensive monitoring (Prometheus/Grafana), structured logging with correlation IDs, and detailed documentation for configuration and usage. Implement advanced caching for optimization results.",
+            "dependencies": [
+              "16.4"
+            ],
+            "details": "Ensure all configuration options are documented, monitoring is enabled for key metrics, and caching is robust for high-throughput scenarios. Follow general and environment-specific best practices.",
+            "status": "pending",
+            "testStrategy": "Test monitoring dashboards, log outputs, and cache hit/miss rates. Review documentation for completeness and clarity."
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "title": "Implement Deployment Guard",
+        "description": "Create a production-hardened DevOps pipeline with GitHub Actions, Docker Buildx, ArgoCD blue/green deployment, and Datadog/Grafana observability.",
+        "details": "1. Implement pre-deploy checks:\n   - `docker compose config` validation\n   - Run `pnpm test` (Vitest ≥ 90% statements)\n   - Run `pnpm lint` with zero errors requirement\n2. Set up post-deploy health checks:\n   - Create `/healthz` endpoint\n   - Configure polling every 5s up to 12 tries\n   - Implement auto-rollback on ≥ 3 consecutive failures\n3. Configure ArgoCD for blue/green deployments\n4. Set up GitHub Actions workflow for CI/CD\n5. Configure Docker Buildx for multi-platform builds\n6. Implement observability with Datadog/Grafana\n7. Create dashboards for system metrics\n8. Set up alerting for critical failures",
+        "testStrategy": "1. Test pre-deploy checks with both passing and failing scenarios\n2. Simulate health check failures to verify auto-rollback\n3. Test blue/green deployment process\n4. Verify metrics collection and dashboard functionality\n5. Test alerting system with simulated failures\n6. End-to-end deployment pipeline test",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Pre-Deploy Checks in CI Pipeline",
+            "description": "Integrate pre-deployment validation steps into the GitHub Actions workflow to ensure code and configuration quality before deployment.",
+            "dependencies": [],
+            "details": "Configure the pipeline to run `docker compose config` for configuration validation, execute `pnpm test` with Vitest ensuring ≥ 90% statement coverage, and enforce `pnpm lint` with zero errors. Ensure these checks block deployment on failure.",
+            "status": "pending",
+            "testStrategy": "Test with both passing and failing scenarios for each check to verify that failures prevent deployment and successes allow progression."
+          },
+          {
+            "id": 2,
+            "title": "Configure Docker Buildx for Secure Multi-Platform Builds",
+            "description": "Set up Docker Buildx in the CI/CD pipeline to build and push production images for multiple architectures, following security and efficiency best practices.",
+            "dependencies": [
+              "17.1"
+            ],
+            "details": "Create and use a dedicated Buildx builder instance. Configure builds with `--platform` for required targets (e.g., linux/amd64, linux/arm64). Apply Docker best practices: use secrets management, non-root users, resource limits, multi-stage builds, specific image tags, and health checks for all services.",
+            "status": "pending",
+            "testStrategy": "Verify images are built for all target platforms, check image manifests, and validate that security and resource constraints are enforced in the resulting images."
+          },
+          {
+            "id": 3,
+            "title": "Set Up ArgoCD Blue/Green Deployment with Automated Health Checks",
+            "description": "Configure ArgoCD to perform blue/green deployments with automated health checks and rollback logic for production safety.",
+            "dependencies": [
+              "17.2"
+            ],
+            "details": "Implement ArgoCD blue/green deployment strategy. Deploy a `/healthz` endpoint in all services. Set up post-deploy health polling every 5 seconds (up to 12 tries) and configure auto-rollback if 3 or more consecutive failures are detected. Document deployment and rollback procedures.",
+            "status": "pending",
+            "testStrategy": "Simulate health check failures to verify that auto-rollback triggers as expected. Test blue/green switch and validate zero-downtime behavior."
+          },
+          {
+            "id": 4,
+            "title": "Integrate Observability with Datadog and Grafana",
+            "description": "Implement comprehensive monitoring and observability for the deployment pipeline and application stack using Datadog and Grafana.",
+            "dependencies": [
+              "17.3"
+            ],
+            "details": "Instrument services for metrics and logs collection. Set up Datadog and Prometheus exporters, configure Grafana dashboards for system and application metrics, and implement structured logging with correlation IDs. Ensure monitoring covers Docker, ArgoCD, and application health.",
+            "status": "pending",
+            "testStrategy": "Verify metrics and logs are collected and visualized in dashboards. Test alerting by simulating critical failures and confirming notifications are triggered."
+          },
+          {
+            "id": 5,
+            "title": "Establish Alerting and Documentation for Production Readiness",
+            "description": "Set up alerting for critical failures and document all deployment guard configurations and operational procedures.",
+            "dependencies": [
+              "17.4"
+            ],
+            "details": "Configure alerting rules in Datadog and Grafana for critical system and application events. Document all configuration options, deployment guard logic, and incident response steps. Ensure documentation is accessible to the DevOps team.",
+            "status": "pending",
+            "testStrategy": "Trigger test alerts to confirm notification channels work. Review documentation for completeness and clarity with team walkthroughs."
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "title": "Develop Knowledge Graph and Advanced Metadata",
+        "description": "Implement a knowledge graph of all rules with edges for relationships and comprehensive metadata.",
+        "details": "1. Create graph structure with nodes for KB and personal rules\n2. Implement edges: `extends`, `relatedTo`, `conflictsWith`\n3. Store adjacency list in Postgres\n4. Store semantic links in Weaviate\n5. Implement metadata fields:\n   - `sourceRepo`, `author`, `createdAt`, `updatedAt`, `version`\n   - `ide`, `framework`, `tier`, `tags[]`, `tokenCount`, `priorityWeight`\n6. Create API endpoint: `GET /api/graph?ide=react`\n7. Return JSON graph representation\n8. Implement D3.js visualization in UI\n9. Add filtering capabilities for graph visualization\n10. Implement graph traversal algorithms for relationship discovery",
+        "testStrategy": "1. Unit tests for graph construction\n2. Tests for metadata handling\n3. API endpoint tests\n4. Integration tests with database\n5. UI tests for graph visualization\n6. Performance tests with large graphs\n7. Validation of graph relationships",
+        "priority": "medium",
+        "dependencies": [
+          14,
+          15
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Graph Data Model and Metadata Schema",
+            "description": "Define the node and edge types for the knowledge graph, including KB and personal rules, and specify comprehensive metadata fields for each node and relationship.",
+            "dependencies": [],
+            "details": "Model nodes for both KB and personal rules. Specify edge types: 'extends', 'relatedTo', 'conflictsWith'. Define metadata fields such as sourceRepo, author, createdAt, updatedAt, version, ide, framework, tier, tags[], tokenCount, and priorityWeight. Ensure the schema supports future extensibility and aligns with FAIR data principles.",
+            "status": "pending",
+            "testStrategy": "Review schema completeness and extensibility. Validate metadata field coverage against requirements. Peer review for alignment with FAIR and security best practices."
+          },
+          {
+            "id": 2,
+            "title": "Implement Graph Storage and Semantic Linkage",
+            "description": "Develop the storage layer for the graph structure using Postgres for adjacency lists and Weaviate for semantic links, ensuring secure, scalable, and performant data management.",
+            "dependencies": [
+              "18.1"
+            ],
+            "details": "Set up Postgres tables for nodes and edges with proper indexing. Integrate Weaviate for semantic relationships, configuring sharding, replication, and resource limits for production. Apply Docker best practices for containerization, including secrets management, resource limits, and health checks.",
+            "status": "pending",
+            "testStrategy": "Unit and integration tests for data persistence and retrieval. Performance tests for large graphs. Security validation for secrets and access controls."
+          },
+          {
+            "id": 3,
+            "title": "Develop API Endpoints for Graph Access",
+            "description": "Create RESTful API endpoints to expose the knowledge graph, supporting filtering (e.g., by IDE), and returning JSON graph representations for client consumption.",
+            "dependencies": [
+              "18.2"
+            ],
+            "details": "Implement GET /api/graph?ide=react and related endpoints. Ensure endpoints support efficient querying, filtering, and pagination. Apply structured logging, error handling, and OAuth 2.0 authentication for secure access.",
+            "status": "pending",
+            "testStrategy": "API unit and integration tests for all endpoints. Security and authentication tests. Validation of filtering and response structure."
+          },
+          {
+            "id": 4,
+            "title": "Build Interactive Graph Visualization and Filtering UI",
+            "description": "Develop a D3.js-based UI component to visualize the knowledge graph, including interactive filtering, metadata display, and relationship exploration.",
+            "dependencies": [
+              "18.3"
+            ],
+            "details": "Implement D3.js visualization with support for dynamic filtering (e.g., by IDE, tags, or relationship type). Display node and edge metadata on interaction. Ensure UI performance and responsiveness for large graphs.",
+            "status": "pending",
+            "testStrategy": "UI tests for visualization accuracy and interactivity. Performance tests with large datasets. Usability testing for filtering and metadata display."
+          },
+          {
+            "id": 5,
+            "title": "Implement Graph Traversal and Relationship Discovery Algorithms",
+            "description": "Develop and integrate algorithms for traversing the knowledge graph and discovering relationships, supporting advanced queries and insights.",
+            "dependencies": [
+              "18.2"
+            ],
+            "details": "Implement traversal algorithms (e.g., BFS, DFS, shortest path) for relationship discovery. Expose traversal capabilities via API and UI. Optimize for performance and scalability. Ensure proper error handling and logging.",
+            "status": "pending",
+            "testStrategy": "Unit and integration tests for traversal logic. Performance and scalability tests. Validation of relationship discovery accuracy."
+          }
+        ]
+      },
+      {
+        "id": 19,
+        "title": "Implement Dynamic and Personal Rule Management",
+        "description": "Create functionality for annotation, explanation, batch import/export, inheritance templates, and team sharing.",
+        "details": "1. Add `explanation: string` field that is persisted and indexed\n2. Show explanations in search tooltips and CLI assist\n3. Implement inheritance templates with `extends: [baseRuleId]`\n4. Create deterministic merge logic with conflict highlighting in editor\n5. Develop batch wizards for ZIP import/export of `.mdc`/`.json` files\n6. Implement mapping preview for imports\n7. Create personal namespace segregation\n8. Implement optional approval flow (`pending → approved`)\n9. Add team sharing functionality with export/import endpoints\n10. Implement role-based access for team collections",
+        "testStrategy": "1. Unit tests for explanation field handling\n2. Tests for inheritance and merge logic\n3. Tests for batch import/export\n4. UI tests for conflict highlighting\n5. Integration tests for approval workflow\n6. End-to-end tests for team sharing\n7. Authorization tests for role-based access",
+        "priority": "medium",
+        "dependencies": [
+          15,
+          18
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Rule Annotation and Explanation Management",
+            "description": "Add support for annotating rules with an 'explanation' field, ensuring it is persisted, indexed, and displayed in search tooltips and CLI assist.",
+            "dependencies": [],
+            "details": "Design and implement the 'explanation: string' field for rules, ensuring it is stored in the database and indexed for search. Update UI and CLI components to display explanations as tooltips or assistive text. Ensure structured logging and monitoring for explanation-related actions.",
+            "status": "pending",
+            "testStrategy": "Create unit and integration tests for explanation field persistence, indexing, and display in both UI and CLI. Validate structured logging for explanation updates."
+          },
+          {
+            "id": 2,
+            "title": "Develop Inheritance Templates and Deterministic Merge Logic",
+            "description": "Implement inheritance templates for rules using an 'extends' mechanism, and create deterministic merge logic with conflict highlighting in the editor.",
+            "dependencies": [
+              "19.1"
+            ],
+            "details": "Design an 'extends: [baseRuleId]' mechanism for rule inheritance. Implement template application logic, allowing inheritors to refine or override base rules. Develop deterministic merge logic to resolve conflicts, with UI/editor support for conflict highlighting. Ensure all changes are logged and monitored.",
+            "status": "pending",
+            "testStrategy": "Write unit and integration tests for inheritance, template application, and merge logic. Add UI tests for conflict highlighting. Validate logging and error handling."
+          },
+          {
+            "id": 3,
+            "title": "Implement Batch Import/Export Wizards with Mapping Preview",
+            "description": "Create batch wizards for ZIP import/export of .mdc/.json files, including a mapping preview step for imports.",
+            "dependencies": [
+              "19.2"
+            ],
+            "details": "Develop UI and backend logic for batch import/export of rules using ZIP archives containing .mdc/.json files. Implement a mapping preview feature to visualize and validate import mappings before execution. Ensure import/export operations are logged, support structured error handling, and follow Docker best practices for file handling.",
+            "status": "pending",
+            "testStrategy": "Create integration and end-to-end tests for batch import/export workflows, including mapping preview validation and error scenarios. Test file handling security and logging."
+          },
+          {
+            "id": 4,
+            "title": "Enable Personal Namespace Segregation and Optional Approval Flow",
+            "description": "Implement personal namespace segregation for rules and an optional approval workflow transitioning rules from 'pending' to 'approved' states.",
+            "dependencies": [
+              "19.3"
+            ],
+            "details": "Design and implement logic to segregate rules by personal namespaces, ensuring access control and isolation. Add an approval flow mechanism allowing rules to transition from 'pending' to 'approved', with appropriate UI and notification support. Integrate structured logging and monitoring for approval actions.",
+            "status": "pending",
+            "testStrategy": "Write unit and integration tests for namespace segregation and approval flow transitions. Add authorization and workflow tests. Validate logging and monitoring."
+          },
+          {
+            "id": 5,
+            "title": "Implement Team Sharing, Role-Based Access, and API Endpoints",
+            "description": "Add team sharing functionality with export/import endpoints and implement role-based access controls for team collections.",
+            "dependencies": [
+              "19.4"
+            ],
+            "details": "Develop API endpoints for team-based export/import of rules. Implement role-based access control (RBAC) for team collections, ensuring only authorized users can access or modify shared rules. Integrate OAuth 2.0 authentication, structured logging, and monitoring. Ensure compliance with Docker and WebSocket MCP security best practices.",
+            "status": "pending",
+            "testStrategy": "Create integration and end-to-end tests for team sharing, RBAC enforcement, and API endpoint security. Test OAuth 2.0 authentication and structured logging for all team actions."
+          }
+        ]
+      },
+      {
+        "id": 20,
+        "title": "Build Search, Filtering, and CLI Optimization",
+        "description": "Implement hybrid semantic/keyword/fuzzy search, coverage heatmaps, contextual recommendations, and AI-assisted ranking.",
+        "details": "1. Implement hybrid search combining cosine similarity with fuzzy matching\n2. Add adjustable threshold for fuzzy matching\n3. Create explicit filter parameters\n4. Implement contextual recommendations endpoint: `GET /api/recommendations?context=[...]`\n5. Use history and project config to propose additional rules\n6. Create UI for KB coverage heatmaps per IDE/framework/tier\n7. Add drill-down lists for missing areas\n8. Implement CLI command autogen endpoint: `GET /api/cli-command?ids=&budget=`\n9. Return validated `claude-code` command with `--context` and `--memory-file`\n10. Include split suggestions if needed",
+        "testStrategy": "1. Unit tests for search algorithms\n2. Tests for filter parameters\n3. Integration tests for recommendations\n4. UI tests for heatmaps and drill-downs\n5. End-to-end tests for CLI command generation\n6. Performance tests for search operations\n7. Relevance tests for search results",
+        "priority": "high",
+        "dependencies": [
+          14,
+          16
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Hybrid Semantic/Keyword/Fuzzy Search Engine",
+            "description": "Develop a search engine that combines semantic vector search (cosine similarity), keyword-based full-text search, and fuzzy matching to maximize relevance and recall.",
+            "dependencies": [],
+            "details": "Integrate vector search (e.g., Weaviate, SQLite-vec, or OpenSearch) with full-text and fuzzy search (e.g., Elasticsearch/OpenSearch FTS). Design a retrieval and reranking pipeline that merges results from all three methods, applies semantic reranking, and supports adjustable fuzzy thresholds. Ensure metadata filtering and support for explicit filter parameters.",
+            "status": "pending",
+            "testStrategy": "Unit and integration tests for each search method; hybrid retrieval quality benchmarks; relevance and recall tests; performance/load tests for search endpoints."
+          },
+          {
+            "id": 2,
+            "title": "Design and Implement Coverage Heatmaps and Drill-down UI",
+            "description": "Create a UI component that visualizes knowledge base (KB) coverage as heatmaps per IDE, framework, and tier, with interactive drill-down lists for missing or weakly covered areas.",
+            "dependencies": [],
+            "details": "Aggregate KB metadata and search analytics to compute coverage metrics. Render heatmaps using a suitable visualization library. Enable users to click on heatmap cells to view detailed lists of missing or underrepresented topics. Ensure accessibility and responsive design.",
+            "status": "pending",
+            "testStrategy": "UI component tests; integration tests with KB analytics backend; user acceptance testing for interactivity and clarity."
+          },
+          {
+            "id": 3,
+            "title": "Develop Contextual Recommendations Endpoint",
+            "description": "Implement an API endpoint (`GET /api/recommendations?context=[...]`) that returns contextual recommendations based on user/project history, current context, and project configuration.",
+            "dependencies": [],
+            "details": "Leverage hybrid search results, user history, and project configuration to generate relevant recommendations. Incorporate AI-assisted ranking and rule-based logic for proposing additional rules or actions. Ensure recommendations are explainable and auditable.",
+            "status": "pending",
+            "testStrategy": "API contract and integration tests; relevance and diversity evaluation; end-to-end tests with simulated user/project contexts."
+          },
+          {
+            "id": 4,
+            "title": "Implement CLI Command Autogen and Validation Endpoint",
+            "description": "Create an endpoint (`GET /api/cli-command?ids=&budget=`) that generates and validates CLI commands, including support for context and memory file arguments, and split suggestions if needed.",
+            "dependencies": [],
+            "details": "Design logic to autogenerate CLI commands based on selected KB items and user constraints. Validate commands for correctness and security (e.g., Docker best practices, non-root users, secrets management). Return commands in `claude-code` format with appropriate flags. Suggest command splits for complex operations.",
+            "status": "pending",
+            "testStrategy": "Unit and integration tests for command generation and validation; security checks; end-to-end tests for CLI workflows."
+          },
+          {
+            "id": 5,
+            "title": "Integrate Security, Monitoring, and Production Patterns",
+            "description": "Apply Docker, WebSocket MCP, and Weaviate production best practices to all search, recommendation, and CLI endpoints, ensuring robust security, monitoring, and scalability.",
+            "dependencies": [],
+            "details": "Implement secrets management, resource limits, structured logging with correlation IDs, health checks, and AppArmor/SELinux profiles for Dockerized services. For WebSocket MCP, enforce OAuth 2.0, typed error handling, and connection resilience. For Weaviate, configure sharding, replication, and memory management. Integrate Prometheus/Grafana monitoring and circuit breakers for external dependencies.",
+            "status": "pending",
+            "testStrategy": "Security and compliance tests; monitoring and alerting validation; load and resilience tests; integration tests for all production patterns."
+          }
+        ]
+      },
+      {
+        "id": 21,
+        "title": "Implement API and Webhook Ecosystem",
+        "description": "Develop REST and GraphQL APIs with webhooks for events, rate limiting, and monitoring.",
+        "details": "1. Create GraphQL schema mirroring REST CRUD/search functionality\n2. Implement GraphQL resolvers\n3. Add subscriptions for rule/memory events (for IDE plugins)\n4. Implement webhooks for events:\n   - `rule.added`, `rule.updated`, `kb.reindexed`\n   - `mcp.synced`, `deploy.status`\n5. Add configurable webhook endpoints\n6. Implement rate limiting: 60 req/min/IP (search), 10 req/min/IP (mutations)\n7. Create `/metrics` endpoint for Prometheus\n8. Set up Grafana dashboards for monitoring\n9. Implement webhook delivery retry logic\n10. Add webhook event history and debugging tools",
+        "testStrategy": "1. Unit tests for GraphQL resolvers\n2. Tests for webhook delivery\n3. Rate limiting tests\n4. Integration tests for GraphQL subscriptions\n5. Metrics endpoint validation\n6. End-to-end API tests\n7. Performance tests under load",
+        "priority": "medium",
+        "dependencies": [
+          15
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design and Implement REST and GraphQL API Schemas with Security and Type Safety",
+            "description": "Define REST endpoints and a GraphQL schema that mirrors CRUD and search functionality, ensuring strong typing, clear documentation, and secure access patterns. Incorporate best practices for schema evolution, error handling, and input validation.",
+            "dependencies": [],
+            "details": "Create a GraphQL schema using schema definition language, reflecting all REST resources and operations. Implement REST endpoints with OpenAPI documentation. Ensure all endpoints and schema fields are protected with authentication and authorization logic. Use introspection and deprecation strategies for schema evolution. Apply Docker best practices for secrets management and non-root users in API containers.",
+            "status": "pending",
+            "testStrategy": "Write unit and integration tests for all REST and GraphQL endpoints. Validate schema correctness and type safety. Test authentication and authorization flows. Use automated tools to check for schema introspection and deprecation warnings."
+          },
+          {
+            "id": 2,
+            "title": "Implement GraphQL Resolvers, Subscriptions, and Real-Time Event Handling",
+            "description": "Develop GraphQL resolvers for all schema fields and mutations, and add subscriptions for rule/memory events to support IDE plugin integrations. Ensure real-time updates are delivered efficiently and securely.",
+            "dependencies": [
+              "21.1"
+            ],
+            "details": "Implement resolver functions for all CRUD and search operations. Add GraphQL subscriptions for events such as rule changes and memory updates. Use WebSocket MCP implementation patterns: TypeScript SDK, JSON-RPC 2.0, typed errors, and OAuth 2.0 authentication. Ensure connection resilience and proper error handling for real-time channels.",
+            "status": "pending",
+            "testStrategy": "Create integration tests for resolver logic and subscription delivery. Simulate IDE plugin connections and verify real-time event propagation. Test error handling and connection recovery scenarios."
+          },
+          {
+            "id": 3,
+            "title": "Develop Webhook Delivery System with Configurable Endpoints, Retry Logic, and Event History",
+            "description": "Implement a webhook system for key events (rule.added, rule.updated, kb.reindexed, mcp.synced, deploy.status), supporting user-configurable endpoints, delivery retries, and event history for debugging.",
+            "dependencies": [
+              "21.2"
+            ],
+            "details": "Allow users to register and manage webhook endpoints. Deliver event payloads with retry logic and exponential backoff. Store webhook delivery history and provide debugging tools. Use structured logging with correlation IDs. Secure webhook payloads and endpoints. Apply Docker best practices for logging and resource limits.",
+            "status": "pending",
+            "testStrategy": "Test webhook registration, event delivery, and retry scenarios. Validate event history logging and debugging tools. Simulate endpoint failures and verify retry/backoff behavior."
+          },
+          {
+            "id": 4,
+            "title": "Implement Rate Limiting and Circuit Breakers for API and Webhook Endpoints",
+            "description": "Enforce rate limits (60 req/min/IP for search, 10 req/min/IP for mutations) and implement circuit breakers for external dependencies to ensure system stability and prevent abuse.",
+            "dependencies": [
+              "21.1",
+              "21.3"
+            ],
+            "details": "Integrate rate limiting middleware for REST, GraphQL, and webhook endpoints. Use IP-based and user-based throttling. Implement circuit breakers for outbound webhook calls and external API dependencies. Monitor and log rate limit and circuit breaker events for analysis.",
+            "status": "pending",
+            "testStrategy": "Write tests for rate limit enforcement and circuit breaker activation. Simulate high-load and abuse scenarios. Validate correct error responses and recovery after limits are reset."
+          },
+          {
+            "id": 5,
+            "title": "Establish Monitoring, Metrics, and Observability with Prometheus and Grafana",
+            "description": "Expose a /metrics endpoint for Prometheus, set up Grafana dashboards, and implement structured logging and health checks for all API and webhook services.",
+            "dependencies": [
+              "21.1",
+              "21.3",
+              "21.4"
+            ],
+            "details": "Instrument all services with Prometheus metrics (API calls, webhook deliveries, error rates, latency, resource usage). Configure Grafana dashboards for real-time monitoring. Implement health checks and structured logs with correlation IDs. Apply Docker health checks and resource limits for all containers.",
+            "status": "pending",
+            "testStrategy": "Validate /metrics endpoint output and Prometheus scraping. Test Grafana dashboard visualizations. Simulate failures and verify health check and alerting mechanisms."
+          }
+        ]
+      },
+      {
+        "id": 22,
+        "title": "Implement Enterprise Security and Compliance",
+        "description": "Develop SSO, audit trails, data residency controls, PII pseudonymization, and point-in-time restore functionality.",
+        "details": "1. Implement SSO with OAuth2/OIDC (Okta/Azure AD)\n2. Set up JWT introspection for APIs\n3. Create JSONL audit logging in object storage\n4. Include user, endpoint, payload hash, and diff in audit logs\n5. Make audit logs SIEM-ready\n6. Implement region-targeted vector and meta stores\n7. Set up encryption-at-rest via KMS\n8. Add configurable retention policies\n9. Implement PII pseudonymization prior to embedding\n10. Set up nightly snapshots (Weaviate + Postgres)\n11. Create point-in-time restore workflow\n12. Implement organization reporting endpoint: `/api/reports/usage?teamId=`\n13. Return CSV/XLSX with rule usage, uptime, and support metrics",
+        "testStrategy": "1. Authentication tests for SSO\n2. Authorization tests for different roles\n3. Audit log validation tests\n4. Data residency compliance tests\n5. PII pseudonymization verification\n6. Backup and restore tests\n7. Report generation tests\n8. Security penetration testing",
+        "priority": "high",
+        "dependencies": [
+          15,
+          21
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Secure SSO and API Authentication",
+            "description": "Develop and integrate Single Sign-On (SSO) using OAuth2/OIDC with providers such as Okta and Azure AD, and set up JWT introspection for API authentication. Ensure Docker containers use secrets management, non-root users, and AppArmor/SELinux profiles for secure deployment.",
+            "dependencies": [],
+            "details": "Configure SSO endpoints, enforce secure authentication flows, and validate JWTs for all API requests. Apply Docker best practices for secrets and container hardening. Document authentication configuration options.",
+            "status": "pending",
+            "testStrategy": "Run authentication and authorization tests for all roles. Validate SSO login/logout flows and JWT introspection. Perform security penetration testing on authentication endpoints."
+          },
+          {
+            "id": 2,
+            "title": "Establish Comprehensive Audit Logging and SIEM Integration",
+            "description": "Create structured JSONL audit logs in object storage, capturing user, endpoint, payload hash, and diffs. Ensure logs are SIEM-ready and follow structured logging with correlation IDs. Implement secure Docker logging strategies.",
+            "dependencies": [
+              "22.1"
+            ],
+            "details": "Design audit log schema, implement logging in all services, and ensure logs are securely stored and accessible for compliance. Integrate with SIEM tools for real-time monitoring and alerting.",
+            "status": "pending",
+            "testStrategy": "Validate audit log entries for all critical actions. Test log ingestion by SIEM. Verify structured format and correlation ID propagation."
+          },
+          {
+            "id": 3,
+            "title": "Enforce Data Residency and Encryption Controls",
+            "description": "Implement region-targeted vector and metadata stores, enforce encryption-at-rest using KMS, and configure retention policies. Apply Weaviate production patterns for sharding, replication, and backup.",
+            "dependencies": [
+              "22.1"
+            ],
+            "details": "Deploy vector/meta stores in required regions, configure KMS for all storage, and set up retention and backup policies. Use Weaviate's sharding, replication, and backup features for compliance and resilience.",
+            "status": "pending",
+            "testStrategy": "Run data residency compliance tests. Verify encryption-at-rest and retention policy enforcement. Test backup and restore procedures."
+          },
+          {
+            "id": 4,
+            "title": "Implement PII Pseudonymization and Data Protection",
+            "description": "Develop mechanisms to pseudonymize personally identifiable information (PII) before embedding or storage. Ensure compliance with privacy regulations and integrate with existing data pipelines.",
+            "dependencies": [
+              "22.1"
+            ],
+            "details": "Identify PII fields, apply pseudonymization algorithms, and validate that no raw PII is stored in vector/meta stores. Document pseudonymization process and configuration.",
+            "status": "pending",
+            "testStrategy": "Perform PII pseudonymization verification tests. Attempt to recover original PII from stored data to ensure irreversibility. Review compliance with privacy requirements."
+          },
+          {
+            "id": 5,
+            "title": "Implement Point-in-Time Restore and Compliance Reporting",
+            "description": "Set up nightly snapshots for Weaviate and Postgres, create a point-in-time restore workflow, and develop an organization reporting endpoint that returns usage, uptime, and support metrics in CSV/XLSX.",
+            "dependencies": [
+              "22.3"
+            ],
+            "details": "Automate snapshot creation and retention, implement restore procedures, and build reporting APIs. Ensure Docker containers use health checks and resource limits for backup/restore reliability.",
+            "status": "pending",
+            "testStrategy": "Run backup and restore tests for both Weaviate and Postgres. Validate report generation accuracy and format. Test restore workflows under failure scenarios."
+          }
+        ]
+      },
+      {
+        "id": 23,
+        "title": "Develop AI-Powered Automation",
+        "description": "Implement AI-powered automation for rule synthesis, natural-language rule creation, A/B testing, and predictive analytics.",
+        "details": "1. Implement effectiveness models using LightGBM on historical data\n2. Create endpoint: `GET /api/models/evaluate?ruleId=`\n3. Implement predictive forecasting with time-series predictions\n4. Surface predictions in UI\n5. Create natural language to rule endpoint: `POST /api/nl2rule`\n6. Accept prose and emit `.mdc` scaffold with validation hints\n7. Implement auto-synthesis LLM pipeline\n8. Merge similar KB rules\n9. Implement de-duplication via fuzzy clustering\n10. Add tagged provenance for synthesized rules",
+        "testStrategy": "1. Unit tests for model training and inference\n2. Tests for natural language processing\n3. Validation of rule synthesis quality\n4. Integration tests for the full pipeline\n5. UI tests for predictive features\n6. Performance tests for LLM operations\n7. A/B testing framework validation",
+        "priority": "medium",
+        "dependencies": [
+          14,
+          15,
+          20
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Effectiveness Models with LightGBM",
+            "description": "Develop and optimize LightGBM-based models for rule effectiveness using historical data, applying best practices for parameter tuning, feature engineering, and model validation.",
+            "dependencies": [],
+            "details": "Apply advanced LightGBM optimization strategies, including parameter tuning, feature engineering, early stopping, and distributed training. Ensure secure handling of data and secrets in Dockerized environments, use non-root users, and implement health checks and resource limits for model services.",
+            "status": "pending",
+            "testStrategy": "Unit tests for model training and inference; cross-validation for model robustness; integration tests for Docker containerization and resource management."
+          },
+          {
+            "id": 2,
+            "title": "Develop API Endpoints for Model Evaluation and Rule Synthesis",
+            "description": "Create RESTful endpoints for model evaluation (`GET /api/models/evaluate?ruleId=`) and natural language to rule conversion (`POST /api/nl2rule`), ensuring secure, scalable, and type-safe implementations.",
+            "dependencies": [
+              "23.1"
+            ],
+            "details": "Implement endpoints using best practices for Docker (secrets, logging, health checks), and WebSocket MCP (TypeScript SDK, JSON-RPC 2.0, OAuth 2.0 for production). Ensure endpoints validate input, handle errors robustly, and emit structured responses.",
+            "status": "pending",
+            "testStrategy": "API unit and integration tests for endpoint correctness, error handling, and security; contract tests for JSON-RPC compliance."
+          },
+          {
+            "id": 3,
+            "title": "Integrate Predictive Forecasting and A/B Testing Framework",
+            "description": "Implement predictive time-series forecasting for rule performance and an A/B testing framework to evaluate rule variants, surfacing results in the UI.",
+            "dependencies": [
+              "23.2"
+            ],
+            "details": "Leverage LightGBM for time-series predictions, ensure batch processing and efficient resource use. Integrate A/B testing logic with comprehensive monitoring (Prometheus/Grafana), structured logging, and circuit breakers for external dependencies.",
+            "status": "pending",
+            "testStrategy": "Unit and integration tests for forecasting accuracy and A/B test logic; UI tests for prediction display; performance/load tests for batch operations."
+          },
+          {
+            "id": 4,
+            "title": "Implement Auto-Synthesis LLM Pipeline and Rule Management",
+            "description": "Develop an LLM-powered pipeline for automatic rule synthesis, merging similar rules, de-duplication via fuzzy clustering, and tagging provenance for synthesized rules.",
+            "dependencies": [
+              "23.3"
+            ],
+            "details": "Use Docker multi-stage builds for LLM services, enforce resource limits, and structured logging. Integrate with Weaviate for rule storage, using sharding and replication for scalability and high availability. Ensure provenance tagging and validation hints are surfaced in outputs.",
+            "status": "pending",
+            "testStrategy": "Unit tests for LLM synthesis and clustering; integration tests for rule merging and provenance tagging; performance tests for LLM operations."
+          },
+          {
+            "id": 5,
+            "title": "Productionize, Monitor, and Document the Automation System",
+            "description": "Harden the automation system for production with comprehensive monitoring, structured logging, backup strategies, graceful shutdown, and full documentation of configuration and operational procedures.",
+            "dependencies": [
+              "23.4"
+            ],
+            "details": "Implement Prometheus/Grafana monitoring, structured logging with correlation IDs, backup and restore for Weaviate, and environment-specific configurations. Document all endpoints, configuration options, and operational runbooks. Ensure zero-downtime upgrades and robust integration testing.",
+            "status": "pending",
+            "testStrategy": "End-to-end integration tests; monitoring and alert validation; backup/restore drills; documentation review and validation."
+          }
+        ]
+      },
+      {
+        "id": 24,
+        "title": "Implement Plugin and IDE Orchestration",
+        "description": "Develop SDK for VS Code/IntelliJ, cross-IDE migration utilities, and in-IDE extensions.",
+        "details": "1. Create NPM packages for VS Code/IntelliJ\n2. Implement search, CRUD, and optimization within IDE\n3. Develop cross-IDE migration utility: `mirg migrate --from cursor --to intellij`\n4. Convert `.mdc` formats via schema mapping\n5. Set up CI jobs to spin headless IDEs\n6. Validate generated packages for syntax/compatibility\n7. Implement in-IDE extensions for direct interaction\n8. Create unified command palette across IDEs\n9. Add context-aware rule suggestions in IDE\n10. Implement real-time rule updates in IDE",
+        "testStrategy": "1. Unit tests for SDK functionality\n2. Tests for migration utility\n3. Integration tests with actual IDEs\n4. End-to-end tests for extension functionality\n5. Compatibility tests across different IDE versions\n6. Performance tests for in-IDE operations\n7. User experience validation",
+        "priority": "medium",
+        "dependencies": [
+          15,
+          20
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Develop Cross-IDE SDKs and NPM Packages",
+            "description": "Create SDKs and NPM packages for both VS Code and IntelliJ, ensuring compatibility and extensibility for plugin and extension development across both IDEs.",
+            "dependencies": [],
+            "details": "Implement core SDK logic using best practices for each IDE (e.g., Language Server Protocol for VS Code, IntelliJ Platform SDK for IntelliJ). Ensure Dockerized build environments use non-root users, secrets management, and multi-stage builds. Integrate structured logging and health checks. Use specific image tags and configure CI for automated builds and tests.",
+            "status": "pending",
+            "testStrategy": "Unit and integration tests for SDK APIs; CI validation of package builds; syntax and compatibility checks for generated packages in both IDEs."
+          },
+          {
+            "id": 2,
+            "title": "Implement In-IDE Extensions and Unified Command Palette",
+            "description": "Develop in-IDE extensions for direct user interaction, including a unified command palette and context-aware rule suggestions, supporting real-time rule updates and CRUD/search/optimization operations.",
+            "dependencies": [
+              "24.1"
+            ],
+            "details": "Leverage WebSocket MCP with TypeScript SDK, JSON-RPC 2.0, and proper error handling. Support both stdio and HTTP transports. Integrate notification handlers for async events and OAuth 2.0 authentication. Use Docker networks for service isolation and implement resource limits. Ensure extensions are tested in headless IDEs via CI.",
+            "status": "pending",
+            "testStrategy": "End-to-end tests for extension functionality; real-time update validation; compatibility tests across IDE versions; performance/load tests for in-IDE operations."
+          },
+          {
+            "id": 3,
+            "title": "Develop Cross-IDE Migration and Format Conversion Utilities",
+            "description": "Build utilities for cross-IDE migration (e.g., `mirg migrate --from cursor --to intellij`) and schema-based conversion of `.mdc` formats.",
+            "dependencies": [
+              "24.1"
+            ],
+            "details": "Implement migration logic with robust error handling and logging. Use batch operations for performance. Ensure Docker containers use read-only volume mounts where possible. Document all configuration options and support graceful shutdown. Integrate with Weaviate for vector data migration, using batch imports and backup strategies.",
+            "status": "pending",
+            "testStrategy": "Unit and integration tests for migration and conversion; compatibility validation between IDEs; performance benchmarks for batch operations."
+          },
+          {
+            "id": 4,
+            "title": "Set Up CI/CD for Headless IDE Testing and Package Validation",
+            "description": "Configure CI jobs to spin up headless IDEs, validate generated packages for syntax and compatibility, and automate integration and performance testing.",
+            "dependencies": [
+              "24.1",
+              "24.2",
+              "24.3"
+            ],
+            "details": "Use Docker best practices for CI containers (resource limits, health checks, structured logging). Implement comprehensive monitoring with Prometheus/Grafana. Ensure environment-specific configurations and secrets management. Automate rolling updates and zero-downtime upgrades for test environments.",
+            "status": "pending",
+            "testStrategy": "Automated CI/CD pipeline validation; integration and compatibility tests across IDEs; monitoring and alerting for test failures; load and performance tests."
+          },
+          {
+            "id": 5,
+            "title": "Implement Monitoring, Security, and Documentation for Orchestration",
+            "description": "Establish monitoring, security, and documentation standards for all orchestration components, including Docker, WebSocket MCP, and Weaviate integrations.",
+            "dependencies": [
+              "24.1",
+              "24.2",
+              "24.3",
+              "24.4"
+            ],
+            "details": "Implement structured logging with correlation IDs, circuit breakers for external dependencies, and OAuth 2.0 authentication for MCP. Configure AppArmor/SELinux profiles for containers. Document all configuration options and provide user/developer guides for migration, extension usage, and troubleshooting.",
+            "status": "pending",
+            "testStrategy": "Security and compliance tests; monitoring validation; documentation review and user acceptance testing."
+          }
+        ]
+      },
+      {
+        "id": 25,
+        "title": "Implement Live Folder Sync",
+        "description": "Create a Chokidar-based watch system with debounce for file synchronization and conflict-safe staging commits.",
+        "details": "1. Implement Chokidar-based file watching\n2. Add debounce mechanism for file changes\n3. Set up synchronization between Z: drive and NAS\n4. Implement conflict-safe staging commits via Taskmaster memory hooks\n5. Create file change detection and diffing\n6. Implement safe write operations to prevent data loss\n7. Add logging for sync operations\n8. Create recovery mechanisms for failed syncs\n9. Implement optional IDE hot-reload integrations\n10. Add configuration options for sync behavior",
+        "testStrategy": "1. Unit tests for file watching and debounce\n2. Tests for synchronization logic\n3. Conflict resolution tests\n4. Integration tests with actual file systems\n5. Performance tests with large file sets\n6. Recovery tests for error scenarios\n7. End-to-end sync validation",
+        "priority": "high",
+        "dependencies": [
+          13
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Chokidar-Based File Watcher with Debounce",
+            "description": "Set up a robust file watcher using Chokidar with built-in debounce and ignore pattern options to efficiently monitor file changes in target directories.",
+            "dependencies": [],
+            "details": "Configure Chokidar to watch the Z: drive and NAS directories, utilizing debounce and throttle options to optimize performance and reduce redundant events. Ensure ignore patterns are set for temporary or irrelevant files. Follow Docker best practices for volume mounts and security.",
+            "status": "pending",
+            "testStrategy": "Write unit tests to verify that file events are detected and debounced correctly. Simulate rapid file changes and confirm only intended events are processed."
+          },
+          {
+            "id": 2,
+            "title": "Develop File Change Detection and Diffing Logic",
+            "description": "Implement logic to detect file changes and generate diffs, ensuring only meaningful changes trigger synchronization.",
+            "dependencies": [
+              "25.1"
+            ],
+            "details": "Combine file event data with content hashing (e.g., md5) to avoid unnecessary syncs when file content is unchanged. Integrate structured logging with correlation IDs for traceability. Prepare for integration with conflict resolution and staging.",
+            "status": "pending",
+            "testStrategy": "Create tests that modify files with and without content changes, verifying that only actual content changes trigger diffs and sync events."
+          },
+          {
+            "id": 3,
+            "title": "Implement Conflict-Safe Staging and Commit Mechanism",
+            "description": "Design and implement a staging area using Taskmaster memory hooks to safely stage and commit file changes, handling conflicts gracefully.",
+            "dependencies": [
+              "25.2"
+            ],
+            "details": "Ensure that concurrent changes are detected and resolved using a conflict-safe protocol. Use memory hooks to track staged changes and prevent data loss. Integrate circuit breakers for external dependencies and document configuration options.",
+            "status": "pending",
+            "testStrategy": "Simulate conflicting edits and verify that the system stages changes safely, prompts for resolution, and commits without data loss."
+          },
+          {
+            "id": 4,
+            "title": "Establish Secure and Reliable Synchronization Between Z: Drive and NAS",
+            "description": "Set up the synchronization logic to transfer staged changes between the Z: drive and NAS, ensuring secure, atomic, and recoverable operations.",
+            "dependencies": [
+              "25.3"
+            ],
+            "details": "Implement safe write operations with rollback and recovery mechanisms for failed syncs. Use Docker volume security best practices, structured logging, and health checks. Monitor sync operations and resource usage.",
+            "status": "pending",
+            "testStrategy": "Run integration and recovery tests simulating network failures, permission errors, and large file sets to ensure reliable sync and recovery."
+          },
+          {
+            "id": 5,
+            "title": "Integrate Monitoring, Logging, and Configuration Management",
+            "description": "Add comprehensive monitoring, structured logging, and configurable sync behavior to support production readiness and maintainability.",
+            "dependencies": [
+              "25.4"
+            ],
+            "details": "Integrate Prometheus/Grafana for monitoring, implement structured logging with correlation IDs, and expose configuration options for debounce, sync intervals, and recovery. Document all configuration and provide graceful shutdown handling.",
+            "status": "pending",
+            "testStrategy": "Verify that monitoring metrics, logs, and configuration changes are correctly captured and reflected in dashboards. Test graceful shutdown and configuration reload scenarios."
+          }
+        ]
+      },
+      {
+        "id": 26,
+        "title": "Implement Dependency Bootstrap",
+        "description": "Set up containerized dependency management for frontend/backend with appropriate libraries and Node version pinning.",
+        "details": "1. Configure containerized `pnpm install` for frontend and backend\n2. Set up LangChain, Radix UI, and Shadcn dependencies\n3. Pin Node version via Volta\n4. Create Docker images for development environment\n5. Implement dependency caching for faster builds\n6. Set up development environment bootstrapping script\n7. Add validation for dependency versions\n8. Implement optional local code signing\n9. Create documentation for dependency management\n10. Set up CI checks for dependency updates",
+        "testStrategy": "1. Test dependency installation in clean environment\n2. Verify correct versions of all dependencies\n3. Test Node version pinning\n4. Validate Docker images\n5. Performance tests for build times\n6. Integration tests for development environment\n7. Documentation validation",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design and Implement Secure, Efficient Dockerfiles for Frontend and Backend",
+            "description": "Create Dockerfiles for both frontend and backend that follow best practices for dependency management, security, and efficiency, including multi-stage builds, non-root users, resource limits, and health checks.",
+            "dependencies": [],
+            "details": "Ensure each Dockerfile uses multi-stage builds to minimize image size, pins Node version via Volta, installs only required dependencies with exact versions, and sets up health checks. Apply security measures such as non-root users, AppArmor/SELinux profiles, and secrets management. Use specific image tags and structured logging.",
+            "status": "pending",
+            "testStrategy": "Build images in a clean environment, verify correct dependency installation and Node version, check for non-root execution, validate health checks, and scan for vulnerabilities."
+          },
+          {
+            "id": 2,
+            "title": "Automate Dependency Installation and Caching with Containerized pnpm",
+            "description": "Configure containerized pnpm install for both frontend and backend, implementing dependency caching to accelerate builds and ensure reproducibility.",
+            "dependencies": [
+              "26.1"
+            ],
+            "details": "Set up Docker build steps to run pnpm install in isolated layers, leveraging Docker cache for node_modules and pnpm store. Ensure cache invalidation on lockfile changes. Integrate dependency validation and version pinning for LangChain, Radix UI, and Shadcn.",
+            "status": "pending",
+            "testStrategy": "Test build speed improvements, verify cache usage on repeated builds, and confirm correct dependency versions are installed."
+          },
+          {
+            "id": 3,
+            "title": "Develop Development Environment Bootstrapping and Validation Scripts",
+            "description": "Create scripts to bootstrap the development environment, validate dependency versions, and optionally perform local code signing.",
+            "dependencies": [
+              "26.2"
+            ],
+            "details": "Implement a script that runs inside the container to automate environment setup, check for correct dependency and Node versions, and optionally sign code artifacts. Integrate structured logging and error handling.",
+            "status": "pending",
+            "testStrategy": "Run scripts in clean containers, verify all checks and setup steps complete successfully, and test optional code signing flow."
+          },
+          {
+            "id": 4,
+            "title": "Document Dependency Management and Containerization Workflow",
+            "description": "Produce comprehensive documentation covering dependency management, containerization, environment setup, and security practices.",
+            "dependencies": [
+              "26.3"
+            ],
+            "details": "Document Dockerfile structure, dependency installation process, caching strategy, security controls, and environment bootstrapping. Include configuration options, troubleshooting, and CI integration notes.",
+            "status": "pending",
+            "testStrategy": "Review documentation for completeness and clarity, validate steps by following them in a clean environment."
+          },
+          {
+            "id": 5,
+            "title": "Integrate CI Checks for Dependency Updates and Build Validation",
+            "description": "Set up CI pipelines to automatically check for dependency updates, validate builds, and enforce dependency/version policies.",
+            "dependencies": [
+              "26.4"
+            ],
+            "details": "Configure CI to run dependency update checks, build and test Docker images, validate dependency versions, and report issues. Ensure CI uses environment-specific configurations and structured logging.",
+            "status": "pending",
+            "testStrategy": "Trigger CI runs on dependency changes, verify update detection, build/test success, and correct reporting of issues."
+          }
+        ]
+      },
+      {
+        "id": 27,
+        "title": "Develop Interactive Rule Editor",
+        "description": "Create a Monaco editor modal with syntax highlighting, live preview, metadata panel, and conflict prompts.",
+        "details": "1. Integrate Monaco editor as a modal component\n2. Implement syntax highlighting for rule formats\n3. Create live preview functionality\n4. Develop metadata panel for rule properties\n5. Implement conflict detection for out-of-band edits\n6. Add conflict resolution prompts\n7. Create undo/redo functionality\n8. Implement auto-save with versioning\n9. Add keyboard shortcuts for common operations\n10. Implement optional CRDT for multi-user co-editing\n11. Add inline \"Explain this rule\" functionality",
+        "testStrategy": "1. Unit tests for editor components\n2. Tests for syntax highlighting\n3. Live preview validation tests\n4. Conflict detection and resolution tests\n5. UI tests for user interactions\n6. Performance tests for large rules\n7. Multi-user editing tests (if implemented)",
+        "priority": "medium",
+        "dependencies": [
+          15,
+          19
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Integrate Monaco Editor Modal with Secure Containerization",
+            "description": "Implement the Monaco editor as a modal React component, ensuring secure Docker deployment using best practices such as non-root users, secrets management, resource limits, and health checks.",
+            "dependencies": [],
+            "details": "Set up the Monaco editor modal with configurable props (language, theme, options, onChange, editorDidMount). Containerize the component using Docker with AppArmor/SELinux profiles, read-only volume mounts, and structured logging. Use specific image tags and implement health checks for the editor service.",
+            "status": "pending",
+            "testStrategy": "Unit tests for modal rendering and editor integration. Container security validation and health check tests."
+          },
+          {
+            "id": 2,
+            "title": "Implement Syntax Highlighting and Live Preview with WebSocket MCP",
+            "description": "Enable syntax highlighting for rule formats and real-time live preview using Monaco's language features and a WebSocket MCP backend for preview updates.",
+            "dependencies": [
+              "27.1"
+            ],
+            "details": "Define custom Monaco themes and language tokens for rule syntax. Use a TypeScript SDK to connect to a WebSocket MCP server with JSON-RPC 2.0, supporting both stdio and HTTP transports. Implement notification handlers for async preview updates and ensure connection resilience.",
+            "status": "pending",
+            "testStrategy": "Tests for syntax highlighting accuracy, live preview correctness, and WebSocket connection resilience."
+          },
+          {
+            "id": 3,
+            "title": "Develop Metadata Panel and Rule Property Management",
+            "description": "Create a metadata panel adjacent to the editor for displaying and editing rule properties, integrating with Weaviate for metadata storage and retrieval.",
+            "dependencies": [
+              "27.1"
+            ],
+            "details": "Design a UI panel to show rule metadata (e.g., author, tags, version). Use Weaviate's API for CRUD operations, ensuring horizontal scaling and replication. Implement structured logging and Prometheus metrics for metadata operations.",
+            "status": "pending",
+            "testStrategy": "UI tests for metadata panel interactions, integration tests for Weaviate connectivity, and performance tests for large metadata sets."
+          },
+          {
+            "id": 4,
+            "title": "Implement Conflict Detection and Resolution Prompts",
+            "description": "Detect out-of-band edits and prompt users with conflict resolution options, leveraging WebSocket MCP for real-time notifications and CRDT for multi-user scenarios.",
+            "dependencies": [
+              "27.2",
+              "27.3"
+            ],
+            "details": "Monitor rule state via WebSocket MCP notifications. On conflict, display modal prompts for merge, overwrite, or discard actions. Optionally, implement CRDT for collaborative editing. Ensure proper error handling and request timeout management.",
+            "status": "pending",
+            "testStrategy": "Conflict simulation tests, UI prompt validation, and multi-user editing tests."
+          },
+          {
+            "id": 5,
+            "title": "Implement Auto-Save, Versioning, and Integration Monitoring",
+            "description": "Add auto-save with versioning for rule edits, structured logging with correlation IDs, and comprehensive monitoring using Prometheus/Grafana.",
+            "dependencies": [
+              "27.1",
+              "27.3"
+            ],
+            "details": "Implement periodic auto-save with version history, using Docker volumes for persistent storage and Weaviate for version metadata. Integrate structured logging and expose Prometheus metrics for editor, preview, and metadata operations. Document all configuration options and ensure graceful shutdown handling.",
+            "status": "pending",
+            "testStrategy": "Auto-save and versioning validation, monitoring endpoint tests, and integration tests for logging and shutdown."
+          }
+        ]
+      },
+      {
+        "id": 28,
+        "title": "Implement Environment Configuration",
+        "description": "Set up configuration for local development, integration, staging, and production environments.",
+        "details": "1. Configure environment-specific URLs:\n   - Local Dev: `http://localhost:5173`\n   - Integration: `http://int.mirg.lan`\n   - Staging: `https://stage.mirg.io`\n   - Production: `https://mirg.io`\n2. Set up authentication providers:\n   - Local Dev: Mock JWT\n   - Integration: Keycloak (dev realm)\n   - Staging: Keycloak (stage)\n   - Production: Auth0/OIDC\n3. Configure databases:\n   - Local Dev: Docker Postgres 15\n   - Integration: Shared PG13\n   - Staging/Production: Aurora PG (multi-AZ)\n4. Set up vector stores:\n   - Local Dev: Weaviate local\n   - Integration: K8s Weaviate (1×)\n   - Staging: K8s (3×)\n   - Production: K8s (5×)\n5. Configure CI/CD pipelines\n6. Set up secrets management\n7. Configure monitoring and observability",
+        "testStrategy": "1. Environment configuration validation tests\n2. Database connection tests\n3. Authentication provider tests\n4. Vector store tests\n5. CI/CD pipeline validation\n6. Secrets management tests\n7. Monitoring configuration tests",
+        "priority": "medium",
+        "dependencies": [
+          17
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Establish Environment-Specific Configuration Management",
+            "description": "Design and implement a system for managing environment-specific configurations, including URLs, environment variables, and configuration files for local development, integration, staging, and production.",
+            "dependencies": [],
+            "details": "Utilize environment variables and dedicated config files (e.g., .env files per environment) to manage URLs and sensitive settings. Document all required variables and validate configurations using tools like zod or envalid. Avoid hard-coding environment details and ensure secure storage of sensitive data using secrets management tools.",
+            "status": "pending",
+            "testStrategy": "Run environment configuration validation tests for each environment. Verify that all required variables are present and correctly loaded. Attempt to start the application in each environment and confirm correct URL and variable resolution."
+          },
+          {
+            "id": 2,
+            "title": "Integrate and Secure Authentication Providers per Environment",
+            "description": "Configure and validate authentication providers for each environment: Mock JWT for local development, Keycloak for integration and staging, and Auth0/OIDC for production.",
+            "dependencies": [
+              "28.1"
+            ],
+            "details": "Implement environment-based selection of authentication providers. Ensure secure handling of authentication secrets using secrets management best practices. For production, enforce OAuth 2.0 and OIDC standards, and document provider-specific configuration requirements.",
+            "status": "pending",
+            "testStrategy": "Execute authentication provider tests in each environment. Validate login flows, token issuance, and error handling. Confirm that secrets are not exposed in logs or code."
+          },
+          {
+            "id": 3,
+            "title": "Provision and Configure Databases and Vector Stores per Environment",
+            "description": "Set up and configure databases (Postgres, Aurora PG) and vector stores (Weaviate) for each environment, following best practices for containerization, scaling, and security.",
+            "dependencies": [
+              "28.1"
+            ],
+            "details": "For local development, use Dockerized Postgres and Weaviate with secure volume mounts and non-root users. For integration, staging, and production, configure shared and managed database services, enable horizontal scaling and replication for Weaviate, and implement resource limits and backup strategies. Use specific image tags and health checks for all services.",
+            "status": "pending",
+            "testStrategy": "Run database connection and vector store tests in each environment. Validate data access, replication, and backup/restore procedures. Confirm container security settings and resource limits."
+          },
+          {
+            "id": 4,
+            "title": "Implement CI/CD Pipelines and Secrets Management",
+            "description": "Set up CI/CD pipelines for automated deployment and integrate robust secrets management for all environments.",
+            "dependencies": [
+              "28.1",
+              "28.2",
+              "28.3"
+            ],
+            "details": "Automate build, test, and deployment workflows using CI/CD tools. Store secrets securely using Docker Secrets, environment variables, or external vaults. Ensure secrets are never hard-coded or exposed in logs. Implement pipeline validation and rollback strategies.",
+            "status": "pending",
+            "testStrategy": "Validate CI/CD pipeline execution for all environments. Test secrets injection and access during build and deployment. Simulate secret rotation and verify application behavior."
+          },
+          {
+            "id": 5,
+            "title": "Configure Monitoring, Observability, and Documentation",
+            "description": "Set up comprehensive monitoring and observability (e.g., Prometheus, Grafana) for all environments and document all configuration options and operational procedures.",
+            "dependencies": [
+              "28.1",
+              "28.2",
+              "28.3",
+              "28.4"
+            ],
+            "details": "Implement structured logging with correlation IDs, configure monitoring dashboards, and set up alerting for critical metrics. Document all configuration options, environment-specific behaviors, and operational runbooks for onboarding and troubleshooting.",
+            "status": "pending",
+            "testStrategy": "Run monitoring configuration tests, verify alerting and dashboard accuracy, and review documentation for completeness and clarity. Test log correlation and traceability across services."
+          }
+        ]
+      },
+      {
+        "id": 29,
+        "title": "Implement Container and Runtime Contracts",
+        "description": "Set up container and volume topology, mount matrix, and runtime interaction contracts.",
+        "details": "1. Configure host to container mount matrix:\n   - `Z:\\projects\\rules-generator` (NAS) → `/mnt/nas/projects/rules-generator`\n   - `C:\\GitHub\\` (workstation) → `/host/github`\n   - `C:\\Taskmaster-MCP\\` → `/mcp`\n   - `/mnt/c/Users/<user>/` (WSL) → `/wsl/home`\n   - `Z:\\docker\\` (NAS) → `/shared/docker`\n2. Set up Docker Compose profiles:\n   - `dev-local`: NAS + GitHub mounts; MCP co-resident\n   - `workstation`: add WSL bind for CLI scripting\n   - `cloud`: no host binds → use agent or object storage\n3. Implement filesystem contracts\n4. Configure permissions and identity (UID:GID `1001:1001`)\n5. Set up runtime interaction contracts:\n   - MIRG ↔ Taskmaster MCP\n   - MIRG ↔ Claude Code CLI\n   - MIRG ↔ IDEs (Cursor/VS Code/IntelliJ)",
+        "testStrategy": "1. Mount configuration tests\n2. Docker Compose profile validation\n3. Filesystem contract enforcement tests\n4. Permission and identity tests\n5. Runtime interaction tests\n6. Performance tests for file operations\n7. End-to-end environment tests",
+        "priority": "medium",
+        "dependencies": [
+          13,
+          17,
+          26
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define and Implement Host-to-Container Mount Matrix",
+            "description": "Establish and document the mapping of host directories to container mount points, ensuring correct topology for NAS, workstation, WSL, and shared storage paths.",
+            "dependencies": [],
+            "details": "Configure Docker Compose and container runtime to mount the specified host paths to their corresponding container destinations. Apply best practices for mount security, such as using read-only binds where appropriate and ensuring UTF-8 compatible filenames for cross-platform compatibility.",
+            "status": "pending",
+            "testStrategy": "Run mount configuration tests to verify all paths are correctly mounted and accessible with intended permissions inside containers."
+          },
+          {
+            "id": 2,
+            "title": "Configure Docker Compose Profiles and Environment-Specific Topologies",
+            "description": "Set up Docker Compose profiles for 'dev-local', 'workstation', and 'cloud' environments, each with appropriate mount and runtime configurations.",
+            "dependencies": [
+              "29.1"
+            ],
+            "details": "Implement Compose profiles to reflect the required mount matrix and runtime differences for each environment. Ensure that cloud profiles use agent/object storage instead of host binds. Apply resource limits, secrets management, and structured logging per environment.",
+            "status": "pending",
+            "testStrategy": "Validate Docker Compose profile selection and environment-specific configuration through profile validation tests and environment variable checks."
+          },
+          {
+            "id": 3,
+            "title": "Implement Filesystem Contracts and Access Controls",
+            "description": "Enforce filesystem contracts for all mounted paths, specifying allowed operations (read, write, append-only, immutable) and ensuring correct permissions and identity mapping (UID:GID 1001:1001).",
+            "dependencies": [
+              "29.2"
+            ],
+            "details": "Apply Docker and OS-level controls to enforce contract rules, such as read-only mounts, append-only directories, and immutable artifact storage. Use non-root users in containers and configure AppArmor/SELinux profiles for additional security.",
+            "status": "pending",
+            "testStrategy": "Execute filesystem contract enforcement tests, including attempts at unauthorized operations and verification of permitted access patterns."
+          },
+          {
+            "id": 4,
+            "title": "Configure Runtime Interaction Contracts and Service Networking",
+            "description": "Set up and document runtime interaction contracts between MIRG, Taskmaster MCP, Claude Code CLI, and IDEs, including network isolation and protocol requirements.",
+            "dependencies": [
+              "29.3"
+            ],
+            "details": "Implement Docker networks for service isolation, configure WebSocket/HTTP transports, and ensure proper authentication (e.g., OAuth 2.0 for MCP). Define and enforce JSON-RPC 2.0 message formats, error handling, and connection resilience strategies.",
+            "status": "pending",
+            "testStrategy": "Run runtime interaction tests to verify connectivity, protocol compliance, authentication, and error handling between all services."
+          },
+          {
+            "id": 5,
+            "title": "Establish Monitoring, Logging, and Health Checks for Containerized Services",
+            "description": "Implement comprehensive monitoring, structured logging, and health checks for all containers and runtime contracts.",
+            "dependencies": [
+              "29.4"
+            ],
+            "details": "Integrate Prometheus/Grafana for monitoring, configure structured logging with correlation IDs, and set up Docker health checks for all services. Document configuration options and ensure graceful shutdown handling.",
+            "status": "pending",
+            "testStrategy": "Perform end-to-end environment tests, validate monitoring dashboards, check log outputs, and simulate failures to confirm health check and shutdown behavior."
+          }
+        ]
+      },
+      {
+        "id": 30,
+        "title": "Implement Security and Compliance Measures",
+        "description": "Set up OWASP scanning, container security, rate limiting, PII handling, and audit retention.",
+        "details": "1. Implement OWASP Top-10 scanning on each PR\n2. Block high-severity security issues\n3. Configure containers to run as non-root UID 1001\n4. Set up least-privilege mounts (prefer `:ro` on KB paths)\n5. Implement rate-limiting for endpoints\n6. Add bot/abuse mitigation\n7. Set up PII pseudonymization prior to embeddings\n8. Configure audit retention for 7 years in Glacier or equivalent\n9. Implement security headers\n10. Set up content security policy\n11. Configure TLS settings\n12. Implement vulnerability scanning",
+        "testStrategy": "1. Security scanning validation\n2. Container security tests\n3. Rate limiting tests\n4. PII handling tests\n5. Audit retention validation\n6. Security header tests\n7. TLS configuration tests\n8. Penetration testing",
+        "priority": "high",
+        "dependencies": [
+          17,
+          22
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Automated OWASP Top-10 and Vulnerability Scanning in CI/CD",
+            "description": "Integrate automated OWASP Top-10 scanning and container image vulnerability scanning into the CI/CD pipeline for every pull request, ensuring high-severity issues are blocked from merging.",
+            "dependencies": [],
+            "details": "Use tools such as Trivy or Docker Scout for container image scanning and OWASP ZAP for application scanning. Configure the pipeline to fail builds on detection of high-severity vulnerabilities. Ensure scanning covers both application code and container dependencies.",
+            "status": "pending",
+            "testStrategy": "Validate that scans run on every PR, block merges with high-severity findings, and generate reports. Test with known vulnerable images and code to confirm detection and enforcement."
+          },
+          {
+            "id": 2,
+            "title": "Enforce Container Runtime Security and Least Privilege",
+            "description": "Configure all containers to run as non-root (UID 1001), apply least-privilege mounts (read-only where possible), and implement resource limits and security profiles.",
+            "dependencies": [
+              "30.1"
+            ],
+            "details": "Set USER directive to 1001 in Dockerfiles. Use --read-only flag and mount volumes as read-only for knowledge base paths. Apply AppArmor/SELinux profiles, and define CPU/memory limits. Avoid mounting sensitive host directories and use Docker networks for isolation.",
+            "status": "pending",
+            "testStrategy": "Run containers and verify UID, mount options, and resource limits. Attempt privilege escalation and unauthorized writes to confirm enforcement. Validate AppArmor/SELinux profile application."
+          },
+          {
+            "id": 3,
+            "title": "Implement Endpoint Rate Limiting and Abuse Mitigation",
+            "description": "Set up rate limiting for all API endpoints and add bot/abuse mitigation mechanisms to protect against denial-of-service and brute-force attacks.",
+            "dependencies": [
+              "30.1"
+            ],
+            "details": "Use middleware or API gateway to enforce per-IP and per-user rate limits. Implement CAPTCHA or behavioral analysis for abuse-prone endpoints. Monitor and log rate-limited and suspicious activity for further analysis.",
+            "status": "pending",
+            "testStrategy": "Simulate high request volumes and bot traffic to verify rate limiting and abuse detection. Confirm legitimate users are not blocked under normal usage."
+          },
+          {
+            "id": 4,
+            "title": "Establish PII Pseudonymization and Secure Handling",
+            "description": "Implement pseudonymization of personally identifiable information (PII) before processing with embeddings or storage, ensuring compliance with privacy regulations.",
+            "dependencies": [
+              "30.1"
+            ],
+            "details": "Integrate a PII detection and pseudonymization library in the data pipeline. Ensure all PII is replaced or masked before being sent to vector stores or external services. Document the pseudonymization process and audit regularly.",
+            "status": "pending",
+            "testStrategy": "Test with sample data containing PII to verify detection and pseudonymization. Review logs and outputs to ensure no raw PII is present post-processing."
+          },
+          {
+            "id": 5,
+            "title": "Configure Long-Term Audit Retention and Security Headers",
+            "description": "Set up audit log retention for 7 years in Glacier or equivalent cold storage, and implement security headers and content security policy for all web endpoints.",
+            "dependencies": [
+              "30.1"
+            ],
+            "details": "Configure log shipping to cold storage with retention policies. Apply HTTP security headers (e.g., Strict-Transport-Security, X-Content-Type-Options) and a robust Content Security Policy. Document retention and header configurations.",
+            "status": "pending",
+            "testStrategy": "Verify audit logs are stored and retrievable for 7 years. Use security header testing tools to confirm correct headers and CSP are applied to all endpoints."
+          }
+        ]
+      },
+      {
+        "id": 31,
+        "title": "Implement Quality Assurance Strategy",
+        "description": "Set up testing infrastructure for unit, API, vector, UI, load, security, and UAT testing.",
+        "details": "1. Configure Vitest + ts-mock for unit testing (target ≥ 90% statements)\n2. Set up Supertest/Playwright for API testing\n3. Create custom MAP harness for vector testing (target MAP@10 ≥ 0.85)\n4. Configure Cypress for component and e2e UI testing\n5. Set up k6/Locust for load testing (target p95 < 1s @ 10k VUs)\n6. Implement OWASP ZAP and Burp for security testing\n7. Create stakeholder scripts for UAT\n8. Set up CI integration for automated testing\n9. Implement test reporting and dashboards\n10. Create test data generation utilities",
+        "testStrategy": "1. Test framework configuration validation\n2. Sample tests for each testing type\n3. CI integration tests\n4. Test reporting validation\n5. Test data generation tests\n6. End-to-end testing pipeline validation\n7. Performance tests for testing infrastructure",
+        "priority": "medium",
+        "dependencies": [
+          17
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design and Implement Containerized Testing Infrastructure",
+            "description": "Establish a Docker-based testing environment for all test types (unit, API, vector, UI, load, security, UAT) ensuring isolation, reproducibility, and alignment with production-like conditions.",
+            "dependencies": [],
+            "details": "Apply Docker best practices: use secrets management, non-root users, resource limits, health checks, specific image tags, structured logging, and service isolation via Docker networks. Integrate with CI for automated test execution and reporting. Ensure all test containers are properly cleaned up and support parallel execution for performance.",
+            "status": "pending",
+            "testStrategy": "Validate container orchestration for each test type, confirm environment parity with production, and verify container lifecycle management (startup, health, teardown) in CI."
+          },
+          {
+            "id": 2,
+            "title": "Configure and Integrate Test Frameworks for All Layers",
+            "description": "Set up and validate test frameworks: Vitest + ts-mock for unit, Supertest/Playwright for API, custom MAP harness for vector, Cypress for UI, k6/Locust for load, OWASP ZAP/Burp for security, and stakeholder-driven UAT scripts.",
+            "dependencies": [
+              "31.1"
+            ],
+            "details": "Ensure each framework is configured for containerized execution, supports automated runs in CI, and meets coverage/performance targets (e.g., ≥90% statements for unit, MAP@10 ≥0.85 for vector, p95 <1s @10k VUs for load). Integrate with Dockerized services and ensure proper test data generation utilities are available.",
+            "status": "pending",
+            "testStrategy": "Run sample tests for each framework, validate coverage and performance thresholds, and confirm integration with containerized dependencies."
+          },
+          {
+            "id": 3,
+            "title": "Implement Secure and Scalable Test Data and Environment Management",
+            "description": "Develop utilities and processes for secure secrets handling, test data generation, and environment-specific configuration for all test stages.",
+            "dependencies": [
+              "31.1"
+            ],
+            "details": "Leverage Docker secrets, environment variable best practices, and volume mount security. Ensure test data utilities support batch imports (for Weaviate), and that all sensitive data is managed securely. Document all configuration options and enforce environment-specific settings for local, integration, staging, and production.",
+            "status": "pending",
+            "testStrategy": "Test secrets injection, validate test data generation for each environment, and verify configuration isolation and correctness across all test stages."
+          },
+          {
+            "id": 4,
+            "title": "Establish Monitoring, Logging, and Reporting for Test Infrastructure",
+            "description": "Integrate comprehensive monitoring (Prometheus/Grafana), structured logging with correlation IDs, and automated test reporting/dashboards for all test runs.",
+            "dependencies": [
+              "31.1",
+              "31.2"
+            ],
+            "details": "Implement logging strategies in all containers, ensure test results are aggregated and visualized, and set up alerting for test failures or infrastructure issues. Monitor resource usage (CPU, memory) for both test containers and underlying services (e.g., Weaviate, databases).",
+            "status": "pending",
+            "testStrategy": "Validate log and metric collection, confirm dashboard accuracy, and test alerting mechanisms for failures or resource anomalies."
+          },
+          {
+            "id": 5,
+            "title": "Validate End-to-End Quality Assurance Pipeline and Production Readiness",
+            "description": "Conduct end-to-end validation of the entire QA pipeline, including CI integration, graceful shutdown, backup strategies, and zero-downtime upgrade scenarios for vector and API services.",
+            "dependencies": [
+              "31.2",
+              "31.3",
+              "31.4"
+            ],
+            "details": "Simulate full test cycles from code commit to test execution and reporting. Test backup and restore for vector data (Weaviate), rolling upgrades, and circuit breaker scenarios for external dependencies. Ensure all shutdowns are graceful and no data is lost.",
+            "status": "pending",
+            "testStrategy": "Run end-to-end pipeline tests, validate backup/restore, simulate upgrade and failure scenarios, and confirm all QA objectives and SLAs are met."
+          }
+        ]
+      },
+      {
+        "id": 32,
+        "title": "Implement Frontend UI with Shadcn Components",
+        "description": "Develop the frontend UI using Vite/TS with Shadcn components, including fixing the badge/progress imports issue.",
+        "details": "1. Set up Vite/TS frontend project\n2. Configure Shadcn UI components\n3. Fix badge/progress imports by pinning `@radix-ui/react-progress`\n4. Fix Shadcn generator exports\n5. Implement UI layouts for all major features\n6. Create responsive design for all screen sizes\n7. Implement dark/light mode\n8. Set up SSE/WebSocket for real-time updates\n9. Configure GraphQL client\n10. Implement authentication UI\n11. Create search interface\n12. Develop rule editor UI\n13. Implement knowledge graph visualization\n14. Create coverage heatmaps",
+        "testStrategy": "1. Component unit tests\n2. UI integration tests\n3. Responsive design tests\n4. Accessibility tests\n5. Performance tests\n6. Browser compatibility tests\n7. End-to-end user flow tests",
+        "priority": "high",
+        "dependencies": [
+          15,
+          18,
+          20,
+          27
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Initialize Vite/TypeScript Project and Configure Shadcn UI",
+            "description": "Set up a new Vite project with TypeScript, install and configure Shadcn UI, Tailwind CSS, and all required dependencies.",
+            "dependencies": [],
+            "details": "Create the project scaffold using Vite with TypeScript. Install Tailwind CSS and Shadcn UI following official documentation. Configure Tailwind, set up the components.json file, and ensure path aliases are set in tsconfig.json. Verify that the project builds and Shadcn components render correctly.",
+            "status": "pending",
+            "testStrategy": "Run the development server and verify that a sample Shadcn component (e.g., Button) renders without errors. Check that Tailwind styles are applied."
+          },
+          {
+            "id": 2,
+            "title": "Fix Badge/Progress Imports and Shadcn Generator Exports",
+            "description": "Resolve issues with badge and progress component imports by pinning @radix-ui/react-progress and correcting Shadcn generator export paths.",
+            "dependencies": [
+              "32.1"
+            ],
+            "details": "Pin the @radix-ui/react-progress package to a compatible version to resolve import errors. Update Shadcn generator configuration to ensure correct export paths for all components, especially badge and progress. Test imports in the codebase to confirm resolution.",
+            "status": "pending",
+            "testStrategy": "Import and render badge and progress components in a test page. Confirm no import or runtime errors. Run component unit tests for these components."
+          },
+          {
+            "id": 3,
+            "title": "Implement Core UI Layouts and Responsive Design",
+            "description": "Develop the main UI layouts for all major features using Shadcn components, ensuring responsive design across all screen sizes.",
+            "dependencies": [
+              "32.2"
+            ],
+            "details": "Design and implement layouts for dashboard, authentication, search, rule editor, knowledge graph, and coverage heatmaps. Use Shadcn components and Tailwind utilities to ensure responsiveness. Include dark/light mode support and accessibility best practices.",
+            "status": "pending",
+            "testStrategy": "Perform responsive design tests using browser dev tools. Run accessibility checks and verify layouts on multiple devices and screen sizes."
+          },
+          {
+            "id": 4,
+            "title": "Integrate Real-Time Updates and GraphQL Client",
+            "description": "Set up SSE/WebSocket for real-time UI updates and configure the GraphQL client for data fetching, following best practices for type safety and error handling.",
+            "dependencies": [
+              "32.3"
+            ],
+            "details": "Implement WebSocket or SSE connections for live data updates, using TypeScript SDKs and JSON-RPC 2.0 where applicable. Configure the GraphQL client with environment-specific endpoints, authentication, and error handling. Ensure connection resilience and proper resource management.",
+            "status": "pending",
+            "testStrategy": "Simulate real-time events and verify UI updates. Test GraphQL queries and mutations for all major features. Run integration tests for WebSocket/SSE and GraphQL flows."
+          },
+          {
+            "id": 5,
+            "title": "Implement Authentication UI and Advanced Feature Interfaces",
+            "description": "Develop authentication UI, search interface, rule editor, knowledge graph visualization, and coverage heatmaps using Shadcn components.",
+            "dependencies": [
+              "32.4"
+            ],
+            "details": "Build authentication forms with support for multiple providers. Implement search, rule editor, knowledge graph, and heatmap UIs, leveraging Shadcn components and custom logic as needed. Ensure all interfaces are accessible, performant, and visually consistent.",
+            "status": "pending",
+            "testStrategy": "Run end-to-end user flow tests for authentication and each advanced feature. Perform UI integration and accessibility tests. Validate performance and browser compatibility."
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-26T09:50:42.539Z",
+      "updated": "2025-07-26T09:53:06.073Z",
+      "description": "Tasks for phase-2 context"
+    }
+  }
+}

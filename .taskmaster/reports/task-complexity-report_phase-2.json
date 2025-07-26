@@ -1,0 +1,269 @@
+{
+	"meta": {
+		"generatedAt": "2025-07-26T10:18:05.087Z",
+		"tasksAnalyzed": 32,
+		"totalTasks": 32,
+		"analysisCount": 32,
+		"thresholdScore": 6,
+		"projectName": "Taskmaster",
+		"usedResearch": true
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 4,
+			"taskTitle": "Configure Container Permissions and Identity",
+			"complexityScore": 6,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand this task into at least 6 subtasks covering: (1) Dockerfile user/group creation and UID/GID enforcement, (2) host ACL and Docker Desktop file sharing configuration for all relevant mounts, (3) implementation of read-only and read-write mount options per knowledge base and data directories, (4) development of a file operation manager for debounced writes and batch artifact flushes with error handling, (5) validation and documentation of permission requirements on both host and container, and (6) automated test coverage for all permission and identity scenarios.",
+			"reasoning": "This task requires cross-cutting changes to Dockerfiles, host OS ACLs, Docker Desktop configuration, and runtime file operation logic. It involves both security and operational best practices (non-root users, least-privilege mounts, debounced writes), and must be validated across multiple environments. While not algorithmically complex, it is operationally intricate and error-prone, especially with NAS/SMB and cross-platform (Windows/WSL) considerations. Six subtasks are recommended to ensure each area is robustly addressed and independently testable."
+		},
+		{
+			"taskId": 1,
+			"taskTitle": "Configure Docker Volume Mounts",
+			"complexityScore": 7,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand this task into at least 7 subtasks: (1) Host and Docker Desktop file sharing validation for all required drives and UNC/NAS paths, (2) explicit documentation and normalization of the host-to-container mount matrix (including OS-specific path handling), (3) implementation of Docker Compose and CLI configurations for all mounts with correct access modes, (4) mount security review (read-only where possible, non-root enforcement, AppArmor/SELinux), (5) robust error handling for mount failures and permission issues, (6) end-to-end verification of mount accessibility and permissions from both host and container, and (7) automated regression tests for mount scenarios and edge cases.",
+			"reasoning": "This task is moderately high in complexity due to the need to handle multiple host OSes, NAS/SMB permissions, Docker Desktop file sharing, and robust error handling. Each mount must be validated for both functionality and security, and failures must be gracefully handled. The operational surface area is broad, and regression risk is high if not thoroughly tested. Seven subtasks will ensure all aspects are covered, including documentation, implementation, security, and validation."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "Implement Performance Monitoring for Health/Latency Targets",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand this task into at least 6 subtasks: (1) Instrumentation of filesystem watcher for latency metrics, (2) instrumentation of vector database operations for rule addition/upsert performance, (3) instrumentation of context package build pipeline, (4) centralized metrics collection and alerting system setup (e.g., Prometheus/Grafana), (5) dashboard and visualization development, and (6) automated performance and alerting validation under load and failure scenarios.",
+			"reasoning": "This task requires instrumentation across multiple subsystems, integration with metrics/alerting stacks, and validation of performance targets under real-world conditions. It involves both code changes and operational monitoring setup. The complexity is increased by the need for accurate measurement, alerting, and visualization, as well as automated validation. Six subtasks are recommended to ensure each monitored area and the overall monitoring/alerting pipeline are robust."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Implement Docker Compose Configuration",
+			"complexityScore": 6,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand this task into at least 6 subtasks: (1) Service specification and image/tag management, (2) volume and mount configuration for all services and profiles, (3) environment variable and secrets management, (4) shared network and service isolation setup, (5) health checks, resource limits, and logging configuration, and (6) automated validation of profile-specific behavior and inter-service connectivity.",
+			"reasoning": "This task is moderately complex due to the need to coordinate multiple services, profiles, mounts, and security settings in Docker Compose. It must ensure correct configuration for different environments, enforce best practices, and validate that all services can communicate and start as expected. Six subtasks will allow for granular implementation and testing of each configuration aspect."
+		},
+		{
+			"taskId": 28,
+			"taskTitle": "Implement Environment Configuration",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand this task into at least 5 subtasks: (1) Environment-specific configuration management (URLs, variables, config files), (2) authentication provider integration and validation per environment, (3) provisioning and configuration of databases and vector stores, (4) CI/CD pipeline and secrets management setup, and (5) monitoring, observability, and documentation for all environments.",
+			"reasoning": "This task is of moderate complexity, involving configuration management across multiple environments, integration of authentication, databases, vector stores, CI/CD, and monitoring. Each area is standard but must be coordinated and validated for environment-specific correctness and security. Five subtasks will ensure each configuration domain is addressed and testable."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "Implement Filesystem Contract Enforcement",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand this task into at least 7 subtasks: (1) Architecture and boundary design for the enforcement layer, (2) implementation of path-specific access control and permissions (append-only, immutable, read-only), (3) integration of file locking and concurrency controls, (4) enforcement of container and environment security best practices, (5) monitoring, logging, and contract violation reporting, (6) automated contract validation and negative testing, and (7) documentation and operational runbooks for contract enforcement.",
+			"reasoning": "This task is high in complexity due to the need for precise enforcement of nuanced filesystem contracts, concurrency control, integration with multiple environments (Docker, NAS, WSL), and robust monitoring/logging. It is security-critical and must be resilient to race conditions and contract violations. Seven subtasks are recommended to ensure architectural clarity, robust implementation, and operational readiness."
+		},
+		{
+			"taskId": 25,
+			"taskTitle": "Implement Live Folder Sync",
+			"complexityScore": 7,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand this task into at least 7 subtasks: (1) Chokidar-based file watcher with debounce and ignore patterns, (2) file change detection and diffing logic, (3) conflict-safe staging and commit mechanism, (4) secure and reliable synchronization logic between Z: drive and NAS, (5) recovery and rollback mechanisms for failed syncs, (6) optional IDE hot-reload integration, and (7) monitoring, logging, configuration management, and automated sync validation.",
+			"reasoning": "This task is moderately high in complexity due to the need for robust file watching, debouncing, diffing, conflict resolution, safe sync operations, and error recovery. It must handle edge cases (network failures, permission errors, large file sets) and integrate with IDEs. Seven subtasks will ensure all critical aspects are implemented and validated."
+		},
+		{
+			"taskId": 30,
+			"taskTitle": "Implement Security and Compliance Measures",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand this task into at least 7 subtasks: (1) Automated OWASP Top-10 and vulnerability scanning in CI/CD, (2) enforcement of container runtime security and least privilege, (3) endpoint rate limiting and abuse mitigation, (4) PII pseudonymization and secure handling, (5) long-term audit retention and security header configuration, (6) TLS and content security policy enforcement, and (7) penetration testing and compliance validation.",
+			"reasoning": "This task is high in complexity due to the breadth of security and compliance requirements: automated scanning, container hardening, rate limiting, PII handling, audit retention, security headers, TLS, and penetration testing. Each area is critical for production readiness and regulatory compliance. Seven subtasks are needed to ensure comprehensive coverage and validation."
+		},
+		{
+			"taskId": 21,
+			"taskTitle": "Implement API and Webhook Ecosystem",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand this task into at least 6 subtasks: (1) REST and GraphQL API schema and security/type safety, (2) GraphQL resolvers, subscriptions, and real-time event handling, (3) webhook delivery system with configurable endpoints, retry logic, and event history, (4) rate limiting and circuit breakers for API and webhooks, (5) monitoring, metrics, and observability setup, and (6) automated end-to-end API, webhook, and monitoring validation.",
+			"reasoning": "This task is moderately high in complexity due to the need for robust API design (REST/GraphQL), real-time event delivery, webhook management, rate limiting, and comprehensive monitoring. Each area must be secure, scalable, and observable. Six subtasks will ensure all critical API and webhook ecosystem components are robustly implemented and validated."
+		},
+		{
+			"taskId": 22,
+			"taskTitle": "Implement Enterprise Security and Compliance",
+			"complexityScore": 9,
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "Expand this task into at least 8 subtasks: (1) SSO and API authentication integration (OAuth2/OIDC, JWT introspection), (2) comprehensive audit logging and SIEM integration, (3) data residency and encryption controls (region-targeted storage, KMS, retention policies), (4) PII pseudonymization and privacy compliance, (5) nightly snapshots and point-in-time restore workflows, (6) compliance reporting and usage metrics endpoints, (7) automated compliance and backup/restore validation, and (8) documentation and operational runbooks for all security and compliance features.",
+			"reasoning": "This task is very high in complexity due to the need for enterprise-grade security (SSO, JWT, SIEM), data residency, encryption, privacy, backup/restore, and compliance reporting. Each area is subject to strict regulatory and operational requirements, and failure in any can have severe consequences. Eight subtasks are needed to ensure each compliance domain is independently implemented, validated, and documented."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "Develop Hybrid Agent for Cloud/Locked-Down Environments",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on develop hybrid agent for cloud/locked-down environments.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "Implement WebSocket Communication for MIRG ↔ Taskmaster MCP",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on implement websocket communication for mirg ↔ taskmaster mcp.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Implement Claude Code CLI Integration",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on implement claude code cli integration.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "Implement IDE Integration",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on implement ide integration.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "Implement Filesystem Watcher",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on implement filesystem watcher.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 11,
+			"taskTitle": "Implement Memory Management System",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on implement memory management system.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 12,
+			"taskTitle": "Create Comprehensive Documentation",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on create comprehensive documentation.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 13,
+			"taskTitle": "Implement Taskmaster AI MCP 2.0 Integration",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on implement taskmaster ai mcp 2.0 integration.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 14,
+			"taskTitle": "Develop Knowledge-Base (KB) Pipeline",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on develop knowledge-base (kb) pipeline.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 15,
+			"taskTitle": "Implement Rule CRUD and Versioning",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on implement rule crud and versioning.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 16,
+			"taskTitle": "Build Token-Budget Optimizer",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on build token-budget optimizer.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 17,
+			"taskTitle": "Implement Deployment Guard",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on implement deployment guard.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 18,
+			"taskTitle": "Develop Knowledge Graph and Advanced Metadata",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on develop knowledge graph and advanced metadata.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 19,
+			"taskTitle": "Implement Dynamic and Personal Rule Management",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on implement dynamic and personal rule management.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 20,
+			"taskTitle": "Build Search, Filtering, and CLI Optimization",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on build search, filtering, and cli optimization.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 23,
+			"taskTitle": "Develop AI-Powered Automation",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on develop ai-powered automation.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 24,
+			"taskTitle": "Implement Plugin and IDE Orchestration",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on implement plugin and ide orchestration.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 26,
+			"taskTitle": "Implement Dependency Bootstrap",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on implement dependency bootstrap.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 27,
+			"taskTitle": "Develop Interactive Rule Editor",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on develop interactive rule editor.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 29,
+			"taskTitle": "Implement Container and Runtime Contracts",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on implement container and runtime contracts.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 31,
+			"taskTitle": "Implement Quality Assurance Strategy",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on implement quality assurance strategy.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 32,
+			"taskTitle": "Implement Frontend UI with Shadcn Components",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on implement frontend ui with shadcn components.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		}
+	]
+}
