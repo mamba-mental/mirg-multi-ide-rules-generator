@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  weaviate:
+    image: semitechnologies/weaviate:1.25.0
+    container_name: mirg-weaviate
+    ports:
+      - "8093:8080"
+      - "50054:50051"
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'none'
+      ENABLE_MODULES: ''
+      CLUSTER_HOSTNAME: 'node1'
+      CLUSTER_ADVERTISE_ADDR: '127.0.0.1'
+      CLUSTER_GOSSIP_BIND_PORT: '7946'
+      CLUSTER_DATA_BIND_PORT: '7947'
+      STANDALONE_MODE: 'true'
+      DISABLE_GOSSIP: 'true'
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+    networks:
+      - mirg-network
+
+  backend:
+    # Use pre-built image instead of building from source
+    image: mirg-backend:latest
+    container_name: mirg-backend
+    ports:
+      - "3121:3100"
+    environment:
+      - NODE_ENV=production
+      - WEAVIATE_URL=http://weaviate:8080
+      - PORT=3100
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - XAI_API_KEY=${XAI_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY:-}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY:-}
+      - GITHUB_API_KEY=${GITHUB_API_KEY:-}
+    depends_on:
+      weaviate:
+        condition: service_healthy
+    volumes:
+      # Mount knowledge base as read-only
+      - /volume1/docker/projects/rules-generator/knowledge-base:/app/knowledge-base:ro
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+    networks:
+      - mirg-network
+
+  frontend:
+    # Use pre-built image instead of building from source
+    image: mirg-frontend:latest
+    container_name: mirg-frontend
+    ports:
+      - "3011:5173"
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=http://192.168.86.97:3121
+    depends_on:
+      - backend
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+    networks:
+      - mirg-network
+
+volumes:
+  weaviate_data:
+    driver: local
+
+networks:
+  mirg-network:
+    driver: bridge
