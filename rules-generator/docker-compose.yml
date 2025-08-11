@@ -1,0 +1,99 @@
+version: '3.8'
+services:
+  weaviate:
+    image: semitechnologies/weaviate:1.25.0
+    container_name: rules-weaviate
+    ports:
+      - "8091:8080"
+      - "50051:50051"
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'none'
+      ENABLE_MODULES: ''
+      CLUSTER_HOSTNAME: 'node1'
+      CLUSTER_ADVERTISE_ADDR: '127.0.0.1'
+      CLUSTER_GOSSIP_BIND_PORT: '7946'
+      CLUSTER_DATA_BIND_PORT: '7947'
+      STANDALONE_MODE: 'true'
+      DISABLE_GOSSIP: 'true'
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    networks:
+      - rules-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+  
+  backend:
+    image: node:20-alpine
+    container_name: rules-backend
+    ports:
+      - "3120:3100"
+    working_dir: /app
+    environment:
+      - NODE_ENV=development
+      - WEAVIATE_URL=http://weaviate:8080
+      - PORT=3100
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    command: |
+      sh -c "
+        npm install -g typescript ts-node &&
+        npm install @types/express @types/archiver @types/cors @types/node &&
+        npm install && npm run dev
+      "
+    depends_on:
+      weaviate:
+        condition: service_healthy
+    volumes:
+      - /volume1/docker/projects/rules-generator/backend:/app
+      - /volume1/docker/projects/knowledge-base:/app/knowledge-base:ro
+    networks:
+      - rules-network
+    restart: unless-stopped
+  
+  frontend:
+    image: node:20-alpine
+    container_name: rules-frontend
+    ports:
+      - "3010:5173"
+    working_dir: /app
+    user: "1001:1000"  # Match host user:docker group
+    environment:
+      - VITE_API_URL=http://192.168.86.97:3120
+    command: |
+      sh -c "
+        # Fix postcss.config.js for TailwindCSS v4
+        cat > postcss.config.js << 'EOFCONFIG'
+      export default {
+        plugins: {
+          '@tailwindcss/postcss': {},
+          autoprefixer: {},
+        },
+      }
+      EOFCONFIG
+        # Install dependencies including the TailwindCSS PostCSS plugin
+        npm install &&
+        npm install -D @tailwindcss/postcss &&
+        # Start dev server
+        npm run dev -- --host 0.0.0.0 --port 5173
+      "
+    depends_on:
+      - backend
+    volumes:
+      - /volume1/docker/projects/rules-generator/frontend:/app
+    networks:
+      - rules-network
+    restart: unless-stopped
+
+volumes:
+  weaviate_data:
+
+networks:
+  rules-network:
+    driver: bridge

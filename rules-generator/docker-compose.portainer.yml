@@ -1,0 +1,184 @@
+services:
+  weaviate:
+    image: semitechnologies/weaviate:1.25.0
+    container_name: mirg-weaviate
+    ports:
+      - "8092:8080"
+      - "50053:50051"
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'none'
+      ENABLE_MODULES: ''
+      CLUSTER_HOSTNAME: 'node1'
+      CLUSTER_ADVERTISE_ADDR: '127.0.0.1'
+      CLUSTER_GOSSIP_BIND_PORT: '7946'
+      CLUSTER_DATA_BIND_PORT: '7947'
+      STANDALONE_MODE: 'true'
+      DISABLE_GOSSIP: 'true'
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+  backend:
+    image: node:20-alpine
+    container_name: mirg-backend
+    ports:
+      - "3121:3100"
+    working_dir: /app
+    environment:
+      - NODE_ENV=development
+      - WEAVIATE_URL=http://weaviate:8080
+      - PORT=3100
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - XAI_API_KEY=${XAI_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY:-}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY:-}
+      - GITHUB_API_KEY=${GITHUB_API_KEY:-}
+    command: |
+      sh -c "
+        echo '🚀 [Portainer-Optimized] Setting up backend environment...'
+        
+        # Create app directory and ensure proper ownership
+        mkdir -p /app
+        chown -R node:node /app
+        
+        # Switch to node user for all operations
+        su node -c '
+          # Copy package files from mounted source if they exist
+          if [ -f /app/package.json ]; then
+            echo \"📦 Installing dependencies from existing package.json...\"
+            npm install -g typescript ts-node-dev nodemon
+            npm install @types/express @types/archiver @types/cors @types/node @types/jest
+            npm install
+          else
+            echo \"⚠️  No package.json found, creating minimal setup...\"
+            npm init -y
+            npm install -g typescript ts-node-dev nodemon
+            npm install express @types/express @types/node typescript ts-node-dev
+          fi
+          
+          echo \"✅ Backend dependencies installed successfully\"
+          echo \"🔥 Starting backend in development mode...\"
+          
+          # Start the application
+          if [ -f /app/src/index.ts ]; then
+            npm run dev
+          else
+            echo \"Starting with ts-node-dev...\"
+            npx ts-node-dev --respawn --transpile-only src/index.ts
+          fi
+        '
+      "
+    depends_on:
+      weaviate:
+        condition: service_healthy
+    volumes:
+      - /volume1/docker/projects/rules-generator/backend:/app
+      - /volume1/docker/projects/knowledge-base:/app/knowledge-base:ro
+      - backend_node_modules:/app/node_modules
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+
+  frontend:
+    image: node:20-alpine
+    container_name: mirg-frontend
+    ports:
+      - "3011:5173"
+    working_dir: /app
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://192.168.86.97:3121
+      - VITE_DEV_MODE=true
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - FAST_REFRESH=true
+    command: |
+      sh -c "
+        echo '🚀 Fixing permissions and setting up frontend environment...'
+        sudo chown -R node:node /app
+        
+        su node -c '
+          echo \"🚀 Setting up frontend development environment...\"
+          
+          # Create optimized postcss config for TailwindCSS v4 compatibility
+          cat > postcss.config.js << \"EOFCONFIG\"
+        export default {
+          plugins: {
+            \"@tailwindcss/postcss\": {},
+            autoprefixer: {},
+          },
+        }
+        EOFCONFIG
+          
+          echo \"📦 Installing dependencies...\"
+          npm install
+          npm install -D @tailwindcss/postcss
+          
+          echo \"✅ Dependencies installed successfully\"
+          echo \"🔥 Starting Vite dev server with HMR...\"
+          
+          # Start with development optimizations
+          npm run dev -- --host 0.0.0.0 --port 5173 --strictPort
+        '
+      "
+    depends_on:
+      - backend
+    volumes:
+      - /volume1/docker/projects/rules-generator/frontend:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_dist:/app/dist
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+
+volumes:
+  weaviate_data:
+    driver: local
+  backend_node_modules:
+    driver: local
+  frontend_node_modules:
+    driver: local
+  frontend_dist:
+    driver: local
+

@@ -1,0 +1,21 @@
+{
+  "taskmaster_integration": {
+    "rule_paths": {
+      "cursor": ".cursor/rules/",
+      "cline": ".clinerules/",
+      "roo": ".roo/",
+      "claude": "CLAUDE.md"
+    },
+    "mount_points": [
+      "/workspace/.cursor",
+      "/workspace/.clinerules", 
+      "/workspace/.taskmaster"
+    ],
+    "file_types": {
+      "cursor": "*.mdc",
+      "cline": "*.md", 
+      "roo": "*.config",
+      "claude": "CLAUDE.md"
+    }
+  }
+}

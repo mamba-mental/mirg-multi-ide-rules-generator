@@ -1,0 +1,31 @@
+2025-08-11T01:39:49Z INF | action=startup default_vectorizer_module=none msg=the default vectorizer modules is set to "none", as a result all new schema classes without an explicit vectorizer setting, will use this vectorizer 
+2025-08-11T01:39:49Z INF | action=startup auto_schema_enabled=true msg=auto schema enabled setting is set to "true" 
+2025-08-11T01:39:49Z INF | msg=No resource limits set, weaviate will use all available memory and CPU. To limit resources, set LIMIT_RESOURCES=true 
+2025-08-11T01:39:50Z INF | msg=open cluster service servers={"node1":8300} 
+2025-08-11T01:39:50Z INF | address=127.0.0.1:8301 msg=starting cloud rpc server ... 
+2025-08-11T01:39:50Z INF | msg=starting raft sub-system ... 
+2025-08-11T01:39:50Z INF | address=127.0.0.1:8300 msg=tcp transport tcpMaxPool=3 tcpTimeout=10000000000 
+2025-08-11T01:39:50Z INF | msg=loading local db 
+2025-08-11T01:39:50Z INF | msg=database has been successfully loaded n=0 
+2025-08-11T01:39:50Z INF | metadata_only_voters=false msg=construct a new raft node name=node1 
+2025-08-11T01:39:50Z INF | action=raft index=0 msg=raft initial configuration servers=[[]] 
+2025-08-11T01:39:50Z INF | last_log_applied_index=0 last_snapshot_index=0 msg=raft node raft_applied_index=0 raft_last_index=0 
+2025-08-11T01:39:50Z INF | action=raft follower={} leader-address= leader-id= msg=raft entering follower state 
+2025-08-11T01:39:51Z warning | msg=raft no known peers, aborting election 
+2025-08-11T01:39:51Z warning | action=bootstrap error=could not join a cluster from [127.0.0.1:8300] msg=failed to join cluster, will notify next if voter servers=["127.0.0.1:8300"] voter=true 
+2025-08-11T01:39:51Z INF | action=bootstrap candidates=[{"Suffrage":0,"ID":"node1","Address":"127.0.0.1:8300"}] msg=starting cluster bootstrapping 
+2025-08-11T01:39:51Z INF | action=bootstrap msg=notified peers this node is ready to join as voter servers=["127.0.0.1:8300"] 
+2025-08-11T01:39:52Z INF | action=grpc_startup msg=grpc server listening at [::]:50051 
+2025-08-11T01:39:52Z INF | action=restapi_management msg=Serving weaviate at http://[::]:8080 
+2025-08-11T01:39:52Z warning | action=bootstrap error=could not join a cluster from [127.0.0.1:8300] msg=failed to join cluster, will notify next if voter servers=["127.0.0.1:8300"] voter=true 
+2025-08-11T01:39:52Z INF | action=bootstrap msg=notified peers this node is ready to join as voter servers=["127.0.0.1:8300"] 
+2025-08-11T01:39:52Z INF | action=telemetry_push msg=telemetry started payload=&{MachineID:7dd7e5cb-4f7d-4ba6-9892-ac328ff32c4a Type:INIT Version:1.25.0 Modules: NumObjects:0 OS:linux Arch:amd64} 
+2025-08-11T01:39:53Z warning | action=raft last-leader-addr= last-leader-id= msg=raft heartbeat timeout reached, starting election 
+2025-08-11T01:39:53Z INF | action=raft msg=raft entering candidate state node={} term=2 
+2025-08-11T01:39:53Z INF | action=raft msg=raft election won tally=1 term=2 
+2025-08-11T01:39:53Z INF | action=raft leader={} msg=raft entering leader state 
+2025-08-11T01:39:53Z INF | address=127.0.0.1:8300 msg=current Leader 
+2025-08-11T01:39:53Z INF | msg=starting migration from old schema 
+2025-08-11T01:39:53Z INF | msg=legacy schema is empty, nothing to migrate 
+2025-08-11T01:39:53Z INF | msg=migration from the old schema has been successfully completed 
+2025-08-11T01:39:53Z INF | action=bootstrap msg=node reporting ready, node has probably recovered cluster from raft config. Exiting bootstrap process 
