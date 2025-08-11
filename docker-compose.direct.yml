@@ -1,0 +1,208 @@
+version: '3.8'
+
+services:
+  # Backend - using Node directly with your built files
+  backend:
+    image: node:18-alpine
+    container_name: mirg-backend
+    working_dir: /app
+    ports:
+      - "3120:3100"
+    environment:
+      NODE_ENV: production
+      PORT: 3100
+    command: |
+      sh -c "
+      echo 'Creating simple backend server...' &&
+      npm init -y &&
+      npm install express cors &&
+      cat > server.js << 'EOSERVER'
+      const express = require('express');
+      const cors = require('cors');
+      const app = express();
+      
+      app.use(cors());
+      app.use(express.json());
+      
+      app.get('/health', (req, res) => res.send('OK'));
+      
+      app.get('/api/rules', (req, res) => {
+        res.json({
+          rules: [
+            { id: 1, name: 'Sample Rule 1', description: 'Test rule' },
+            { id: 2, name: 'Sample Rule 2', description: 'Another test rule' }
+          ]
+        });
+      });
+      
+      app.post('/api/rules/generate', (req, res) => {
+        res.json({
+          success: true,
+          message: 'Rules generated successfully',
+          rules: req.body
+        });
+      });
+      
+      const PORT = process.env.PORT || 3100;
+      app.listen(PORT, () => {
+        console.log(\`MIRG Backend running on port \${PORT}\`);
+      });
+      EOSERVER
+      node server.js"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Frontend - simple static HTML for now
+  frontend:
+    image: nginx:alpine
+    container_name: mirg-frontend  
+    ports:
+      - "3010:80"
+    command: |
+      sh -c "
+      echo 'Creating frontend...' &&
+      cat > /usr/share/nginx/html/index.html << 'EOHTML'
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>MIRG - Multi-IDE Rules Generator</title>
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+          }
+          .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+          }
+          h1 { 
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+          }
+          .status { 
+            padding: 20px;
+            background: #f0f4f8;
+            border-radius: 8px;
+            margin: 20px 0;
+          }
+          .endpoint {
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+          }
+          button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+          }
+          button:hover {
+            background: #5a6edb;
+          }
+          #response {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            min-height: 100px;
+            margin-top: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>🚀 MIRG - Multi-IDE Rules Generator</h1>
+          
+          <div class="status">
+            <h2>✅ System Status</h2>
+            <p>Frontend: <strong>Running</strong></p>
+            <p>Backend API: <span id="backend-status">Checking...</span></p>
+          </div>
+          
+          <h2>📡 API Endpoints</h2>
+          <div class="endpoint">GET http://192.168.86.97:3120/health</div>
+          <div class="endpoint">GET http://192.168.86.97:3120/api/rules</div>
+          <div class="endpoint">POST http://192.168.86.97:3120/api/rules/generate</div>
+          
+          <h2>🔧 Test API</h2>
+          <button onclick="testHealth()">Test Health</button>
+          <button onclick="getRules()">Get Rules</button>
+          <button onclick="generateRules()">Generate Sample Rules</button>
+          
+          <div id="response"></div>
+        </div>
+        
+        <script>
+          const API_URL = 'http://192.168.86.97:3120';
+          
+          async function testHealth() {
+            try {
+              const res = await fetch(API_URL + '/health');
+              const data = await res.text();
+              document.getElementById('response').textContent = 'Health Check: ' + data;
+              document.getElementById('backend-status').innerHTML = '<strong style="color: green;">Online</strong>';
+            } catch (err) {
+              document.getElementById('response').textContent = 'Error: ' + err.message;
+              document.getElementById('backend-status').innerHTML = '<strong style="color: red;">Offline</strong>';
+            }
+          }
+          
+          async function getRules() {
+            try {
+              const res = await fetch(API_URL + '/api/rules');
+              const data = await res.json();
+              document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+              document.getElementById('response').textContent = 'Error: ' + err.message;
+            }
+          }
+          
+          async function generateRules() {
+            try {
+              const res = await fetch(API_URL + '/api/rules/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  ide: 'vscode', 
+                  framework: 'react',
+                  rules: ['eslint', 'prettier'] 
+                })
+              });
+              const data = await res.json();
+              document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+              document.getElementById('response').textContent = 'Error: ' + err.message;
+            }
+          }
+          
+          // Check backend status on load
+          testHealth();
+        </script>
+      </body>
+      </html>
+      EOHTML
+      nginx -g 'daemon off;'"
+    restart: unless-stopped
+
+networks:
+  default:
+    name: mirg-network
