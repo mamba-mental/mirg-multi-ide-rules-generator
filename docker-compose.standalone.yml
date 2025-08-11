@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    image: node:18-alpine
+    container_name: mirg-backend
+    working_dir: /app
+    ports:
+      - "3121:3100"
+    environment:
+      NODE_ENV: production
+      PORT: 3100
+    command: |
+      sh -c "
+      echo 'const express = require(\"express\");
+      const app = express();
+      app.get(\"/health\", (req, res) => res.send(\"OK\"));
+      app.get(\"/\", (req, res) => res.json({message: \"MIRG Backend API\"}));
+      app.listen(3100, () => console.log(\"Server running on port 3100\"));' > server.js &&
+      npm init -y &&
+      npm install express &&
+      node server.js"
+    restart: unless-stopped
+
+  frontend:
+    image: nginx:alpine
+    container_name: mirg-frontend
+    ports:
+      - "3011:80"
+    volumes:
+      - ./frontend-config:/usr/share/nginx/html:ro
+    restart: unless-stopped
