@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  # Simple test backend
+  backend:
+    image: ealen/echo-server:latest
+    container_name: mirg-backend
+    ports:
+      - "3121:80"
+    environment:
+      PORT: 80
+    restart: unless-stopped
+
+  # Simple test frontend  
+  frontend:
+    image: nginx:alpine
+    container_name: mirg-frontend
+    ports:
+      - "3011:80"
+    restart: unless-stopped
