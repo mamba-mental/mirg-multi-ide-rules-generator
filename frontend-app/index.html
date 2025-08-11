@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MIRG - Multi-IDE Rules Generator</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+    
+    h1 { 
+      color: #333;
+      border-bottom: 3px solid #667eea;
+      padding-bottom: 10px;
+      margin-bottom: 30px;
+    }
+    
+    h2 {
+      color: #555;
+      margin: 30px 0 15px;
+    }
+    
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+    
+    .status-card { 
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #ddd;
+    }
+    
+    .status-card.online { border-left-color: #4caf50; }
+    .status-card.offline { border-left-color: #f44336; }
+    .status-card.checking { border-left-color: #ff9800; }
+    
+    .endpoint {
+      background: #e8f5e9;
+      padding: 12px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      word-break: break-all;
+    }
+    
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 20px 0;
+    }
+    
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+    
+    button:hover {
+      background: #5a6edb;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    #response {
+      background: #263238;
+      color: #aed581;
+      padding: 20px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      min-height: 100px;
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    
+    .badge.online { background: #4caf50; color: white; }
+    .badge.offline { background: #f44336; color: white; }
+    .badge.checking { background: #ff9800; color: white; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 MIRG - Multi-IDE Rules Generator</h1>
+    
+    <div class="status-grid">
+      <div class="status-card" id="frontend-card">
+        <h3>Frontend</h3>
+        <p>Status: <span class="badge online">ONLINE</span></p>
+        <p>Port: 3010</p>
+      </div>
+      
+      <div class="status-card checking" id="backend-card">
+        <h3>Backend API</h3>
+        <p>Status: <span class="badge checking" id="backend-status">Checking...</span></p>
+        <p>Port: 3120</p>
+      </div>
+      
+      <div class="status-card checking" id="weaviate-card">
+        <h3>Weaviate DB</h3>
+        <p>Status: <span class="badge checking" id="weaviate-status">Checking...</span></p>
+        <p>Port: 8091</p>
+      </div>
+    </div>
+    
+    <h2>📡 API Endpoints</h2>
+    <div class="endpoint">GET http://192.168.86.97:3120/health</div>
+    <div class="endpoint">GET http://192.168.86.97:3120/api/rules</div>
+    <div class="endpoint">GET http://192.168.86.97:3120/api/weaviate/status</div>
+    <div class="endpoint">POST http://192.168.86.97:3120/api/rules/generate</div>
+    <div class="endpoint">GET http://192.168.86.97:8091/v1/.well-known/ready</div>
+    
+    <h2>🔧 Test Controls</h2>
+    <div class="button-group">
+      <button onclick="testHealth()">Test Health</button>
+      <button onclick="getRules()">Get Rules</button>
+      <button onclick="testWeaviate()">Test Weaviate</button>
+      <button onclick="generateRules()">Generate Rules</button>
+      <button onclick="clearResponse()">Clear Output</button>
+    </div>
+    
+    <h2>📊 Response Output</h2>
+    <div id="response">Ready for testing...</div>
+  </div>
+  
+  <script>
+    const API_URL = 'http://192.168.86.97:3120';
+    
+    function updateStatus(service, status) {
+      const badge = document.getElementById(service + '-status');
+      const card = document.getElementById(service + '-card');
+      
+      if (badge) {
+        badge.textContent = status.toUpperCase();
+        badge.className = 'badge ' + (status === 'online' ? 'online' : status === 'offline' ? 'offline' : 'checking');
+      }
+      
+      if (card) {
+        card.className = 'status-card ' + (status === 'online' ? 'online' : status === 'offline' ? 'offline' : 'checking');
+      }
+    }
+    
+    async function testHealth() {
+      try {
+        const res = await fetch(API_URL + '/health');
+        const data = await res.text();
+        document.getElementById('response').textContent = 'Health Check Response:\n' + data;
+        updateStatus('backend', 'online');
+      } catch (err) {
+        document.getElementById('response').textContent = 'Health Check Error:\n' + err.message;
+        updateStatus('backend', 'offline');
+      }
+    }
+    
+    async function getRules() {
+      try {
+        const res = await fetch(API_URL + '/api/rules');
+        const data = await res.json();
+        document.getElementById('response').textContent = 'Rules Response:\n' + JSON.stringify(data, null, 2);
+        updateStatus('backend', 'online');
+      } catch (err) {
+        document.getElementById('response').textContent = 'Get Rules Error:\n' + err.message;
+        updateStatus('backend', 'offline');
+      }
+    }
+    
+    async function testWeaviate() {
+      try {
+        const res = await fetch(API_URL + '/api/weaviate/status');
+        const data = await res.json();
+        document.getElementById('response').textContent = 'Weaviate Status:\n' + JSON.stringify(data, null, 2);
+        
+        if (data.ready) {
+          updateStatus('weaviate', 'online');
+        } else {
+          updateStatus('weaviate', 'offline');
+        }
+      } catch (err) {
+        document.getElementById('response').textContent = 'Weaviate Error:\n' + err.message;
+        updateStatus('weaviate', 'offline');
+      }
+    }
+    
+    async function generateRules() {
+      try {
+        const payload = {
+          ide: 'vscode',
+          framework: 'react',
+          rules: ['eslint', 'prettier', 'typescript']
+        };
+        
+        const res = await fetch(API_URL + '/api/rules/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        const data = await res.json();
+        document.getElementById('response').textContent = 'Generate Rules Response:\n' + JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById('response').textContent = 'Generate Rules Error:\n' + err.message;
+      }
+    }
+    
+    function clearResponse() {
+      document.getElementById('response').textContent = 'Output cleared. Ready for testing...';
+    }
+    
+    // Auto-check status on load
+    window.addEventListener('load', () => {
+      testHealth();
+      setTimeout(testWeaviate, 2000);
+    });
+    
+    // Periodic status checks
+    setInterval(() => {
+      testHealth();
+      testWeaviate();
+    }, 30000);
+  </script>
+</body>
+</html>
