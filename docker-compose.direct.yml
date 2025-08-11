@@ -11,6 +11,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3100
+      WEAVIATE_URL: http://weaviate:8080
     command: |
       sh -c "
       echo 'Creating simple backend server...' &&
@@ -31,8 +32,27 @@ services:
           rules: [
             { id: 1, name: 'Sample Rule 1', description: 'Test rule' },
             { id: 2, name: 'Sample Rule 2', description: 'Another test rule' }
-          ]
+          ],
+          weaviate_status: 'Connected to ' + process.env.WEAVIATE_URL
         });
+      });
+      
+      app.get('/api/weaviate/status', async (req, res) => {
+        try {
+          const http = require('http');
+          const weaviateUrl = process.env.WEAVIATE_URL || 'http://weaviate:8080';
+          http.get(weaviateUrl + '/v1/.well-known/ready', (resp) => {
+            let data = '';
+            resp.on('data', (chunk) => { data += chunk; });
+            resp.on('end', () => {
+              res.json({ status: 'connected', url: weaviateUrl, ready: true });
+            });
+          }).on('error', (err) => {
+            res.json({ status: 'error', error: err.message });
+          });
+        } catch (err) {
+          res.json({ status: 'error', error: err.message });
+        }
       });
       
       app.post('/api/rules/generate', (req, res) => {
@@ -136,16 +156,20 @@ services:
             <h2>✅ System Status</h2>
             <p>Frontend: <strong>Running</strong></p>
             <p>Backend API: <span id="backend-status">Checking...</span></p>
+            <p>Weaviate DB: <span id="weaviate-status">Checking...</span></p>
           </div>
           
           <h2>📡 API Endpoints</h2>
           <div class="endpoint">GET http://192.168.86.97:3120/health</div>
           <div class="endpoint">GET http://192.168.86.97:3120/api/rules</div>
+          <div class="endpoint">GET http://192.168.86.97:3120/api/weaviate/status</div>
           <div class="endpoint">POST http://192.168.86.97:3120/api/rules/generate</div>
+          <div class="endpoint">GET http://192.168.86.97:8091 (Weaviate Direct)</div>
           
           <h2>🔧 Test API</h2>
           <button onclick="testHealth()">Test Health</button>
           <button onclick="getRules()">Get Rules</button>
+          <button onclick="testWeaviate()">Test Weaviate</button>
           <button onclick="generateRules()">Generate Sample Rules</button>
           
           <div id="response"></div>
@@ -176,6 +200,22 @@ services:
             }
           }
           
+          async function testWeaviate() {
+            try {
+              const res = await fetch(API_URL + '/api/weaviate/status');
+              const data = await res.json();
+              document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+              if (data.ready) {
+                document.getElementById('weaviate-status').innerHTML = '<strong style="color: green;">Online</strong>';
+              } else {
+                document.getElementById('weaviate-status').innerHTML = '<strong style="color: orange;">Starting...</strong>';
+              }
+            } catch (err) {
+              document.getElementById('response').textContent = 'Error: ' + err.message;
+              document.getElementById('weaviate-status').innerHTML = '<strong style="color: red;">Offline</strong>';
+            }
+          }
+          
           async function generateRules() {
             try {
               const res = await fetch(API_URL + '/api/rules/generate', {
@@ -194,14 +234,43 @@ services:
             }
           }
           
-          // Check backend status on load
+          // Check backend and weaviate status on load
           testHealth();
+          setTimeout(testWeaviate, 2000);
         </script>
       </body>
       </html>
       EOHTML
       nginx -g 'daemon off;'"
     restart: unless-stopped
+
+  # Weaviate Vector Database
+  weaviate:
+    image: semitechnologies/weaviate:1.25.0
+    container_name: mirg-weaviate
+    ports:
+      - "8091:8080"
+      - "50051:50051"
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'none'
+      ENABLE_MODULES: ''
+      CLUSTER_HOSTNAME: 'node1'
+      STANDALONE_MODE: 'true'
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  weaviate_data:
+    driver: local
 
 networks:
   default:
