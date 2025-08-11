@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  backend:
+    image: node:18-alpine
+    container_name: mirg-backend
+    working_dir: /app
+    volumes:
+      - ./backend-app:/app
+    ports:
+      - "3120:3100"
+    environment:
+      - NODE_ENV=production
+      - PORT=3100
+      - WEAVIATE_URL=http://weaviate:8080
+    command: node server.js
+    networks:
+      - mirg-network
+    restart: unless-stopped
+
+  frontend:
+    image: nginx:alpine
+    container_name: mirg-frontend
+    ports:
+      - "3010:80"
+    volumes:
+      - ./frontend-app:/usr/share/nginx/html:ro
+    networks:
+      - mirg-network
+    restart: unless-stopped
+    # Fix permissions by running as root
+    user: root
+
+  weaviate:
+    image: semitechnologies/weaviate:1.25.0
+    container_name: mirg-weaviate
+    ports:
+      - "8091:8080"
+      - "50051:50051"
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'none'
+      ENABLE_MODULES: ''
+      # Disable clustering for single-node setup
+      CLUSTER_HOSTNAME: 'node1'
+      CLUSTER_ADVERTISE_ADDR: '127.0.0.1'
+      CLUSTER_JOIN: ''
+      DISABLE_TELEMETRY: 'true'
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    networks:
+      - mirg-network
+    restart: unless-stopped
+
+networks:
+  mirg-network:
+    driver: bridge
+
+volumes:
+  weaviate_data:
